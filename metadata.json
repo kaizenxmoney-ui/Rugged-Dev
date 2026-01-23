@@ -1,0 +1,7 @@
+{
+  "name": "OFFICIAL Rugged Dev Website",
+  "description": "The official home of $RDEV, a community-driven experiment where the dev holds no more than $20. Built for the survivors of the crypto warzone.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
