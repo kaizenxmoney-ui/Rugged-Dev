@@ -257,7 +257,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
           {/* Protocol Terminal */}
           <div className="border-2 sm:border-4 border-white/5 bg-black p-4 sm:p-10 flex flex-col h-[500px] sm:h-[850px] rounded-2xl sm:rounded-[2rem] shadow-2xl relative">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 border-b border-white/10 pb-4">
-              <h3 className="text-lg sm:text-xl font-black text-rugged-green uppercase italic tracking-widest">Protocol Terminal</h3>
+              <h3 className="text-lg sm:text-xl font-black text-rugged-green uppercase italic tracking-widest">Dev's Terminal</h3>
               <div className="flex gap-2">
                 <button 
                   onClick={() => { setThinkingMode(!thinkingMode); sounds.playRelayClick(); }} 
@@ -271,7 +271,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
             <div className="flex-1 overflow-y-auto mb-4 sm:mb-8 space-y-4 pr-2 custom-scrollbar font-mono text-xs sm:text-sm">
               {chatHistory.length === 0 && (
                 <div className="h-full flex items-center justify-center text-white/10 font-black text-center px-4 uppercase tracking-widest leading-loose">
-                  Analysis engine active. Query for complex survival mechanics or market data.
+                  ask dev a question
                 </div>
               )}
               {chatHistory.map((msg, i) => (
