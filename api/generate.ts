@@ -1,4 +1,6 @@
-import { GoogleGenerativeAI } from "@google/genai";
+
+// Fixed the import to use GoogleGenAI and updated the logic to follow coding guidelines.
+import { GoogleGenAI } from "@google/genai";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
@@ -6,16 +8,25 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(process.env.NANO_BANANA_API_KEY!);
-
-    const model = genAI.getGenerativeModel({ model: "imagen-3.0-generate-001" });
+    // Initialization: Always use a named parameter and obtain the API key exclusively from process.env.API_KEY.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const { prompt } = req.body;
 
-    const result = await model.generateContent(prompt);
+    // Call generateImages to generate images with Imagen models; updated to a supported Imagen model name.
+    const response = await ai.models.generateImages({
+      model: 'imagen-4.0-generate-001',
+      prompt: prompt,
+      config: {
+        numberOfImages: 1,
+        outputMimeType: 'image/png',
+        aspectRatio: '1:1',
+      },
+    });
 
-    res.status(200).json(result);
+    res.status(200).json(response);
   } catch (err: any) {
+    // Implement robust handling for API errors.
     res.status(500).json({ error: err.message });
   }
 }

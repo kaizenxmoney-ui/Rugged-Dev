@@ -16,10 +16,12 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
   const [chatHistory, setChatHistory] = useState<{role: 'user' | 'bot', text: string, sources?: any[]}[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [genPrompt, setGenPrompt] = useState('');
+  const [forgeEditPrompt, setForgeEditPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [imageSize, setImageSize] = useState('1K');
   const [generatedImg, setGeneratedImg] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isMorphing, setIsMorphing] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [thinkingMode, setThinkingMode] = useState(false);
@@ -39,6 +41,18 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
       await window.aistudio.openSelectKey();
       setApiError(null);
     }
+  };
+
+  const getBase64FromUrl = async (url: string): Promise<string> => {
+    if (url.startsWith('data:')) return url.split(',')[1];
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => { resolve((reader.result as string).split(',')[1]); };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   };
 
   const withRetry = async <T,>(fn: () => Promise<T>, maxRetries = 7): Promise<T> => {
@@ -164,6 +178,55 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
     }
   };
 
+  const morphForgeImage = async () => {
+    if (!forgeEditPrompt.trim() || !generatedImg) return;
+    setIsMorphing(true);
+    setApiError(null);
+    sounds.playCommandClick();
+    try {
+      const base64Data = await getBase64FromUrl(generatedImg);
+      const mimeType = generatedImg.startsWith('data:') ? generatedImg.split(';')[0].split(':')[1] : 'image/png';
+      
+      const response = await withRetry(async () => {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const characterGuidance = `
+          ACT AS: A professional trench-survivor artist. 
+          IDENTITY LOCK: Maintain the exact same RuggedDev Wojak character from the input image. Keep the pale face, tired eyes, and hand-drawn wobbly style.
+          REQUEST: ${forgeEditPrompt}. 
+          MODIFICATION RULE: Only change what is requested (e.g., adding an item, changing background, adding a filter). DO NOT change the core Wojak identity.
+        `.trim();
+
+        return await ai.models.generateContent({
+          model: 'gemini-2.5-flash-image',
+          contents: {
+            parts: [
+              { inlineData: { data: base64Data, mimeType: mimeType } },
+              { text: characterGuidance }
+            ]
+          }
+        }) as GenerateContentResponse;
+      });
+
+      let foundImageUrl: string | null = null;
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          foundImageUrl = `data:image/png;base64,${part.inlineData.data}`;
+          break;
+        }
+      }
+
+      if (foundImageUrl) { 
+        setGeneratedImg(foundImageUrl); 
+        sounds.playNeutralBlip();
+      }
+    } catch (err: any) { 
+      setApiError(err.message || "Forge Morph Failed."); 
+    } finally { 
+      setIsMorphing(false); 
+      setForgeEditPrompt(''); 
+    }
+  };
+
   const handleAddToGallery = () => { if (generatedImg && onImageGenerated) { onImageGenerated(generatedImg); sounds.playCommandClick(); } };
   const downloadRaw = () => { if (!generatedImg) return; sounds.playCommandClick(); const link = document.createElement('a'); link.download = `rugged-forge-${Date.now()}.png`; link.href = generatedImg; link.click(); };
 
@@ -270,15 +333,43 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                 </div>
               </div>
 
-              <button onClick={generateImage} disabled={isGenerating || !genPrompt.trim()} className="w-full bg-rugged-red py-4 sm:py-6 font-black text-white text-lg sm:text-xl rounded-xl active:scale-95 uppercase tracking-widest shadow-[0_10px_30px_rgba(193,39,45,0.3)]">
-                {isGenerating ? 'SUMMONING...' : 'SUMMON VISUAL'}
-              </button>
+              <div className="flex flex-col gap-4">
+                <button onClick={generateImage} disabled={isGenerating || isMorphing || !genPrompt.trim()} className="w-full bg-rugged-red py-4 sm:py-6 font-black text-white text-lg sm:text-xl rounded-xl active:scale-95 uppercase tracking-widest shadow-[0_10px_30px_rgba(193,39,45,0.3)]">
+                  {isGenerating ? 'SUMMONING...' : 'SUMMON VISUAL'}
+                </button>
+
+                {generatedImg && (
+                  <div className="p-4 bg-white/5 border border-rugged-green/20 rounded-xl space-y-3 animate-reveal">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-rugged-green rounded-full"></div>
+                      <span className="text-[10px] font-black text-rugged-green uppercase tracking-widest">Morph Identity (2.5 Flash)</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input 
+                        value={forgeEditPrompt} 
+                        onChange={(e) => setForgeEditPrompt(e.target.value)} 
+                        placeholder="Add a mask, change hat, background..." 
+                        className="flex-1 bg-black border border-white/10 p-3 text-white rounded-lg focus:border-rugged-green outline-none text-[11px] font-mono"
+                      />
+                      <button 
+                        onClick={morphForgeImage} 
+                        disabled={isGenerating || isMorphing || !forgeEditPrompt.trim()} 
+                        className="bg-rugged-green px-6 font-black text-white uppercase rounded-lg active:scale-95 text-[11px]"
+                      >
+                        {isMorphing ? '...' : 'MORPH'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               
               <div className="mt-8 relative rounded-2xl overflow-hidden border-2 border-white/5 aspect-square flex items-center justify-center bg-[#050505]">
-                {isGenerating ? (
+                {(isGenerating || isMorphing) ? (
                   <div className="flex flex-col items-center">
                     <div className="w-10 h-10 border-4 border-rugged-red border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <span className="font-black uppercase text-[10px] tracking-widest animate-pulse">Syncing Visual Engine (Search Enabled)</span>
+                    <span className="font-black uppercase text-[10px] tracking-widest animate-pulse">
+                      {isGenerating ? 'Syncing Visual Engine (Search Enabled)' : 'Recalibrating Identity...'}
+                    </span>
                   </div>
                 ) : generatedImg ? (
                   <div className="relative w-full h-full group">

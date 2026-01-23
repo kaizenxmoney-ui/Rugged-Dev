@@ -41,41 +41,47 @@
         border-color: #6e6e6e;
       }
 
-      /* Falling Candlesticks Animation */
+      /* Falling Candlesticks Animation - Performance Optimized */
       @keyframes fallingCandle {
-        0% { transform: translateY(0); }
-        100% { transform: translateY(calc(100vh + 1000px)); }
+        0% { transform: translate3d(0, 0, 0); }
+        100% { transform: translate3d(0, calc(100vh + 800px), 0); }
       }
 
       /* Scanning Line Animation */
       @keyframes scan {
-        0% { transform: translateY(0); }
-        100% { transform: translateY(1000%); }
+        0% { transform: translate3d(0, 0, 0); }
+        100% { transform: translate3d(0, 1000%, 0); }
       }
 
-      /* System Shake for Rugging */
+      /* System Shake for Rugging - Subtle & High Performance */
       @keyframes shake {
-        0%, 100% { transform: translate(0, 0); }
-        10%, 30%, 50%, 70%, 90% { transform: translate(-4px, -2px); }
-        20%, 40%, 60%, 80% { transform: translate(4px, 2px); }
+        0%, 100% { transform: translate3d(0, 0, 0); }
+        10%, 30%, 50%, 70%, 90% { transform: translate3d(-3px, -1px, 0); }
+        20%, 40%, 60%, 80% { transform: translate3d(3px, 1px, 0); }
       }
 
-      /* Reveal Animation for sections */
+      /* Reveal Animation for sections - Smooth Easing */
       @keyframes reveal {
-        0% { opacity: 0; transform: translateY(20px); }
-        100% { opacity: 1; transform: translateY(0); }
+        0% { opacity: 0; transform: translate3d(0, 15px, 0); }
+        100% { opacity: 1; transform: translate3d(0, 0, 0); }
       }
 
       /* Gallery Marquee */
       @keyframes marquee {
-        0% { transform: translateX(0); }
-        100% { transform: translateX(-50%); }
+        0% { transform: translate3d(0, 0, 0); }
+        100% { transform: translate3d(-50%, 0, 0); }
       }
 
-      /* Floating effect for Mascot */
+      /* Floating effect for Mascot - Graceful */
       @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-20px); }
+        0%, 100% { transform: translate3d(0, 0, 0); }
+        50% { transform: translate3d(0, -12px, 0); }
+      }
+
+      /* Pulse Glitch for specific elements */
+      @keyframes pulseGlitch {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
       }
 
       .chart-grid {
@@ -86,18 +92,18 @@
       }
 
       .float-shadow {
-        animation: float 6s ease-in-out infinite;
+        animation: float 5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
       }
 
       .reveal-hidden {
         opacity: 0;
-        transform: translateY(30px);
-        transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        transform: translate3d(0, 25px, 0);
+        transition: all 0.7s cubic-bezier(0.22, 1, 0.36, 1);
       }
 
       .reveal-visible {
         opacity: 1;
-        transform: translateY(0);
+        transform: translate3d(0, 0, 0);
       }
 
       .animate-shake {
@@ -105,7 +111,11 @@
       }
 
       .animate-reveal {
-        animation: reveal 0.6s ease-out forwards;
+        animation: reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      .animate-pulse-glitch {
+        animation: pulseGlitch 2s ease-in-out infinite;
       }
 
       .custom-scrollbar::-webkit-scrollbar {
