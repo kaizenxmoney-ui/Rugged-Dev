@@ -1,3 +1,4 @@
+
 export const COLORS = {
   PRIMARY_GREEN: '#3A5F3D',
   CHART_RED: '#C1272D',
@@ -7,10 +8,15 @@ export const COLORS = {
 };
 
 /**
- * The official RuggedDev character image. 
- * Updated to the raw GitHub URL provided by the user.
+ * The permanent official mascot image for the story section. 
+ * This URL is hardcoded to ensure it persists across refreshes.
  */
-export const FALLBACK_IMAGE = "https://raw.githubusercontent.com/kaizenxmoney-ui/Rugged-Dev/main/ruggeddev.png"; 
+export const OFFICIAL_STORY_IMAGE = "https://raw.githubusercontent.com/kaizenxmoney-ui/Rugged-Dev/main/ruggeddev.png";
+
+/**
+ * Default fallback for dynamic areas like the Hero or PFP generator.
+ */
+export const FALLBACK_IMAGE = OFFICIAL_STORY_IMAGE; 
 
 export const STORAGE_KEYS = {
   CUSTOM_CHARACTER: 'rugged_dev_custom_char',

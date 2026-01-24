@@ -1,15 +1,16 @@
 
 import React, { useState } from 'react';
 import { RevealText } from './RevealText';
-import { FALLBACK_IMAGE } from '../constants';
+import { OFFICIAL_STORY_IMAGE } from '../constants';
 
 interface StoryProps {
-  baseImage: string; // Keep prop to avoid breaking App.tsx, but ignore it for the profile image
+  baseImage?: string; // Prop kept for signature compatibility but ignored for absolute permanence
 }
 
 export const Story: React.FC<StoryProps> = () => {
-  // Permanently set to the official mascot URL as requested
-  const imgSrc = "https://raw.githubusercontent.com/kaizenxmoney-ui/Rugged-Dev/main/ruggeddev.png";
+  // Permanently set to the official mascot URL from constants. 
+  // This ensures the Story section profile never changes or disappears.
+  const imgSrc = OFFICIAL_STORY_IMAGE;
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -36,6 +37,7 @@ export const Story: React.FC<StoryProps> = () => {
                     src={imgSrc} 
                     alt="Survivor Mascot" 
                     className="w-full h-full object-cover grayscale brightness-75 transition-all duration-1000 group-hover:grayscale-0 group-hover:brightness-100"
+                    loading="eager"
                   />
                   
                   <div className={`absolute inset-0 pointer-events-none transition-opacity duration-700 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
