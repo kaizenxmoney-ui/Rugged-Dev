@@ -6,7 +6,7 @@ import { sounds } from '../utils/sounds';
 
 export const Tokenomics: React.FC = () => {
   const [copied, setCopied] = useState(false);
-  const contractAddress = "2Z2d9kY4F8L7GJAEdv7n7zWBDGmgvrefWJjFVxzzpump";
+  const contractAddress = "11111111111111111111111111111111111";
 
   const handleCopy = () => {
     sounds.playClick();
