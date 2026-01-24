@@ -25,63 +25,50 @@
         overflow-x: hidden;
       }
 
-      .text-rugged-green {
-        color: #3a5f3d;
-      }
-      .bg-rugged-green {
-        background-color: #3a5f3d;
-      }
-      .text-rugged-red {
-        color: #c1272d;
-      }
-      .bg-rugged-red {
-        background-color: #c1272d;
-      }
-      .border-rugged-gray {
-        border-color: #6e6e6e;
+      /* Tactical Grain Overlay */
+      body::after {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        opacity: 0.04;
+        pointer-events: none;
+        z-index: 9999;
       }
 
-      /* Falling Candlesticks Animation - Performance Optimized */
+      .text-rugged-green { color: #3a5f3d; }
+      .bg-rugged-green { background-color: #3a5f3d; }
+      .text-rugged-red { color: #c1272d; }
+      .bg-rugged-red { background-color: #c1272d; }
+      .border-rugged-gray { border-color: #6e6e6e; }
+
       @keyframes fallingCandle {
         0% { transform: translate3d(0, 0, 0); }
         100% { transform: translate3d(0, calc(100vh + 800px), 0); }
       }
 
-      /* Scanning Line Animation */
       @keyframes scan {
         0% { transform: translate3d(0, 0, 0); }
         100% { transform: translate3d(0, 1000%, 0); }
       }
 
-      /* System Shake for Rugging - Subtle & High Performance */
       @keyframes shake {
         0%, 100% { transform: translate3d(0, 0, 0); }
         10%, 30%, 50%, 70%, 90% { transform: translate3d(-3px, -1px, 0); }
         20%, 40%, 60%, 80% { transform: translate3d(3px, 1px, 0); }
       }
 
-      /* Reveal Animation for sections - Smooth Easing */
-      @keyframes reveal {
-        0% { opacity: 0; transform: translate3d(0, 15px, 0); }
-        100% { opacity: 1; transform: translate3d(0, 0, 0); }
-      }
-
-      /* Gallery Marquee */
       @keyframes marquee {
         0% { transform: translate3d(0, 0, 0); }
         100% { transform: translate3d(-50%, 0, 0); }
       }
 
-      /* Floating effect for Mascot - Graceful */
       @keyframes float {
         0%, 100% { transform: translate3d(0, 0, 0); }
         50% { transform: translate3d(0, -12px, 0); }
-      }
-
-      /* Pulse Glitch for specific elements */
-      @keyframes pulseGlitch {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.6; }
       }
 
       .chart-grid {
@@ -95,59 +82,44 @@
         animation: float 5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
       }
 
+      /* Unified Reveal System */
       .reveal-hidden {
         opacity: 0;
-        transform: translate3d(0, 25px, 0);
-        transition: all 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+        transition: all 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+        will-change: transform, opacity;
       }
+      
+      .reveal-up { transform: translate3d(0, 40px, 0); }
+      .reveal-down { transform: translate3d(0, -40px, 0); }
+      .reveal-left { transform: translate3d(-40px, 0, 0); }
+      .reveal-right { transform: translate3d(40px, 0, 0); }
+      .reveal-scale { transform: scale(0.95); }
 
       .reveal-visible {
         opacity: 1;
-        transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0) scale(1);
       }
 
-      .animate-shake {
-        animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
-      }
+      /* Staggered Delays */
+      .delay-100 { transition-delay: 100ms; }
+      .delay-200 { transition-delay: 200ms; }
+      .delay-300 { transition-delay: 300ms; }
+      .delay-400 { transition-delay: 400ms; }
+      .delay-500 { transition-delay: 500ms; }
 
-      .animate-reveal {
-        animation: reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      }
+      .animate-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+      
+      .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+      .custom-scrollbar::-webkit-scrollbar-track { background: #000; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: #3A5F3D; border-radius: 10px; }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #C1272D; }
 
-      .animate-pulse-glitch {
-        animation: pulseGlitch 2s ease-in-out infinite;
-      }
-
-      .custom-scrollbar::-webkit-scrollbar {
-        width: 6px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-track {
-        background: #000;
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #3A5F3D;
-        border-radius: 10px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: #C1272D;
-      }
-
-      ::-webkit-scrollbar {
-        width: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #111111;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #333333;
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #3a5f3d;
-      }
+      ::-webkit-scrollbar { width: 8px; }
+      ::-webkit-scrollbar-track { background: #111111; }
+      ::-webkit-scrollbar-thumb { background: #333333; border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: #3a5f3d; }
     </style>
 
-    <!-- Import maps -->
     <script type="importmap">
       {
         "imports": {
@@ -159,7 +131,6 @@
       }
     </script>
   </head>
-
   <body>
     <div id="root"></div>
     <script type="module" src="./index.tsx"></script>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Hero } from './components/Hero';
 import { Story } from './components/Story';
@@ -15,6 +16,64 @@ import { IdentityInitiation } from './components/IdentityInitiation';
 import { FALLBACK_IMAGE, STORAGE_KEYS } from './constants';
 import { sounds } from './utils/sounds';
 
+// Simple IndexedDB wrapper for large image storage
+const initDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('RuggedDevArchive', 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('gallery')) {
+        db.createObjectStore('gallery', { keyPath: 'id', autoIncrement: true });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const saveToDB = async (imageUrl: string) => {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('gallery', 'readwrite');
+    const store = tx.objectStore('gallery');
+    store.add({ image: imageUrl, timestamp: Date.now() });
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  });
+};
+
+const getFromDB = async (): Promise<string[]> => {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('gallery', 'readonly');
+    const store = tx.objectStore('gallery');
+    const request = store.getAll();
+    request.onsuccess = () => {
+      // Return sorted by timestamp descending
+      const results = request.result.sort((a, b) => b.timestamp - a.timestamp);
+      resolve(results.map((r: any) => r.image));
+    };
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const deleteFromDB = async (imageUrl: string) => {
+  const db = await initDB();
+  const tx = db.transaction('gallery', 'readwrite');
+  const store = tx.objectStore('gallery');
+  const request = store.openCursor();
+  request.onsuccess = (event: any) => {
+    const cursor = event.target.result;
+    if (cursor) {
+      if (cursor.value.image === imageUrl) {
+        cursor.delete();
+      } else {
+        cursor.continue();
+      }
+    }
+  };
+};
+
 const App: React.FC = () => {
   const [baseCharacter, setBaseCharacter] = useState<string>(FALLBACK_IMAGE);
   const [memeBaseImage, setMemeBaseImage] = useState<string>(FALLBACK_IMAGE);
@@ -22,12 +81,12 @@ const App: React.FC = () => {
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
   const [isChecking, setIsChecking] = useState<boolean>(true);
   
-  // Easter Egg States
   const [easterEggPhase, setEasterEggPhase] = useState<'none' | 'rugged' | 'recovery'>('none');
   const [showGame, setShowGame] = useState(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const hydrate = async () => {
+      // 1. Check API Key
       if (typeof window.aistudio !== 'undefined') {
         const hasKey = await window.aistudio.hasSelectedApiKey();
         setIsAuthorized(hasKey);
@@ -35,57 +94,57 @@ const App: React.FC = () => {
         setIsAuthorized(true);
       }
       
-      // Load custom character
+      // 2. Load custom character from localStorage (smaller string)
       const storedChar = localStorage.getItem(STORAGE_KEYS.CUSTOM_CHARACTER);
       if (storedChar) {
         setBaseCharacter(storedChar);
+        setMemeBaseImage(storedChar);
       }
 
-      // Load persistent gallery
-      const storedGallery = localStorage.getItem(STORAGE_KEYS.GALLERY);
-      if (storedGallery) {
-        try {
-          const parsed = JSON.parse(storedGallery);
-          if (Array.isArray(parsed)) {
-            setGalleryImages(parsed);
-          }
-        } catch (e) {
-          console.error("Failed to load archive:", e);
+      // 3. Load Gallery from IndexedDB (Much more reliable for large base64)
+      try {
+        const dbImages = await getFromDB();
+        if (dbImages && dbImages.length > 0) {
+          setGalleryImages(dbImages);
         }
+      } catch (e) {
+        console.error("Archive retrieval failed:", e);
       }
 
       setIsChecking(false);
     };
-    checkAuth();
+    hydrate();
   }, []);
 
-  // Sync gallery to localStorage whenever it changes
-  useEffect(() => {
-    if (!isChecking) {
-      try {
-        localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(galleryImages));
-      } catch (e) {
-        // Handle localStorage quota exceeded by keeping fewer images if necessary
-        console.warn("Storage quota warning: Archive may be too large.");
-      }
+  const addToGallery = async (imageUrl: string) => {
+    if (galleryImages.includes(imageUrl)) return;
+    
+    // Update local state
+    setGalleryImages(prev => [imageUrl, ...prev]);
+    
+    // Persist to IndexedDB
+    try {
+      await saveToDB(imageUrl);
+    } catch (e) {
+      console.error("Archive save failed:", e);
     }
-  }, [galleryImages, isChecking]);
-
-  const addToGallery = (imageUrl: string) => {
-    setGalleryImages(prev => {
-      if (prev.includes(imageUrl)) return prev;
-      // We keep up to 12 images to respect typical localStorage limits for base64 strings
-      return [imageUrl, ...prev].slice(0, 12);
-    });
   };
 
-  const deleteFromGallery = (index: number) => {
+  const deleteFromGallery = async (index: number) => {
     sounds.playClick();
+    const target = galleryImages[index];
     setGalleryImages(prev => prev.filter((_, i) => i !== index));
+    
+    try {
+      await deleteFromDB(target);
+    } catch (e) {
+      console.error("Archive deletion failed:", e);
+    }
   };
 
   const handleSetCustomCharacter = (imageUrl: string) => {
     setBaseCharacter(imageUrl);
+    setMemeBaseImage(imageUrl);
     localStorage.setItem(STORAGE_KEYS.CUSTOM_CHARACTER, imageUrl);
     sounds.playNeutralBlip();
   };
@@ -124,7 +183,7 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-[#3A5F3D] font-black text-2xl animate-pulse tracking-widest uppercase">
-          Verifying Clearance...
+          Initializing Trench Protocol...
         </div>
       </div>
     );
@@ -174,9 +233,9 @@ const App: React.FC = () => {
     <div className={`min-h-screen bg-[#111111] text-[#F2F2F2] selection:bg-[#3A5F3D] selection:text-white ${easterEggPhase === 'rugged' ? 'animate-shake' : ''}`}>
       <Hero baseImage={baseCharacter} onTriggerEasterEgg={triggerEasterEgg} />
       
-      <IdentityInitiation onIdentitySet={handleSetCustomCharacter} />
+      <IdentityInitiation onIdentitySet={handleSetCustomCharacter} currentIdentity={baseCharacter} />
       
-      <Story baseImage={baseCharacter} />
+      <Story />
       <Transparency />
       <AILab 
         baseImage={baseCharacter} 

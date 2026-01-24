@@ -19,17 +19,17 @@ export const Transparency: React.FC = () => {
           </RevealText>
           
           <div className="grid md:grid-cols-2 gap-8 mb-12">
-            <div className="p-6 bg-black border-2 border-rugged-green rounded-xl">
+            <RevealText direction="left" delay={100} className="p-6 bg-black border-2 border-rugged-green rounded-xl">
               <h3 className="text-xl font-black mb-2 text-white uppercase tracking-tighter">I. Absolute Parity</h3>
               <p className="text-[#6E6E6E] font-medium leading-relaxed">The dev wallet was limited to a $20 entry at launch. No presales, no insiders, no hidden allocations. The creator's risk is identical to that of any other survivor.</p>
-            </div>
-            <div className="p-6 bg-black border-2 border-rugged-green rounded-xl">
+            </RevealText>
+            <RevealText direction="right" delay={200} className="p-6 bg-black border-2 border-rugged-green rounded-xl">
               <h3 className="text-xl font-black mb-2 text-white uppercase tracking-tighter">II. Zero Spend Rule</h3>
               <p className="text-[#6E6E6E] font-medium leading-relaxed">Zero marketing budget. Zero paid influencers. Zero advertisements. Growth is a pure measurement of community energy, not a dev's bank account.</p>
-            </div>
+            </RevealText>
           </div>
 
-          <div className="mt-8 p-6 bg-black/40 border border-[#3A5F3D]/30 rounded-2xl">
+          <RevealText direction="scale" delay={300} className="mt-8 p-6 bg-black/40 border border-[#3A5F3D]/30 rounded-2xl">
             <h3 className="text-[#3A5F3D] font-black text-xl mb-4 uppercase tracking-tighter italic text-center">Incentive Split: The 30/70 Protocol</h3>
             <div className="grid sm:grid-cols-2 gap-6 text-center">
               <div>
@@ -43,13 +43,13 @@ export const Transparency: React.FC = () => {
                 <p className="text-[9px] mt-2 text-[#6E6E6E]/60 italic leading-tight">Directly allocated to survivor incentives, community giveaways, and ecosystem growth.</p>
               </div>
             </div>
-          </div>
+          </RevealText>
           
-          <div className="mt-12 text-center max-w-2xl mx-auto">
+          <RevealText direction="up" delay={400} className="mt-12 text-center max-w-2xl mx-auto">
             <p className="text-xs font-medium text-[#6E6E6E] leading-relaxed italic uppercase tracking-widest">
               "There are no hidden taxes or backdoor mechanics. Every operational cost is stated openly."
             </p>
-          </div>
+          </RevealText>
         </div>
       </div>
     </section>

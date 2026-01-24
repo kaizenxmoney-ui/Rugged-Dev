@@ -1,13 +1,15 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { RevealText } from './RevealText';
 import { sounds } from '../utils/sounds';
+import { FALLBACK_IMAGE } from '../constants';
 
 interface IdentityInitiationProps {
   onIdentitySet: (imageUrl: string) => void;
+  currentIdentity: string;
 }
 
-export const IdentityInitiation: React.FC<IdentityInitiationProps> = ({ onIdentitySet }) => {
+export const IdentityInitiation: React.FC<IdentityInitiationProps> = ({ onIdentitySet, currentIdentity }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
@@ -31,6 +33,10 @@ export const IdentityInitiation: React.FC<IdentityInitiationProps> = ({ onIdenti
     }
   };
 
+  // Determine what to display: the new preview OR the already saved current identity
+  const isConfirmed = currentIdentity && currentIdentity !== FALLBACK_IMAGE;
+  const displayImage = preview || (isConfirmed ? currentIdentity : null);
+
   return (
     <section className="py-20 bg-black border-y border-[#3A5F3D]/20">
       <div className="container mx-auto px-4 max-w-4xl">
@@ -45,11 +51,12 @@ export const IdentityInitiation: React.FC<IdentityInitiationProps> = ({ onIdenti
               
               <div className="mb-6">
                 <p className="text-[#3A5F3D] font-black text-xl uppercase tracking-[0.2em] animate-pulse mb-2">
-                  Verify your visual identity
+                  {isConfirmed && !preview ? 'Identity Verified' : 'Verify your visual identity'}
                 </p>
                 <p className="text-[#6E6E6E] font-medium text-lg uppercase tracking-widest leading-relaxed">
-                  The trenches require a clear mask. Update your visual identity to stand with the survivors. <br/>
-                  <span className="text-[#3A5F3D] font-black">Reforge your image. Become the survivor.</span>
+                  {isConfirmed && !preview 
+                    ? 'Your visual record is logged in the trench protocol. You can re-forge your image at any time.'
+                    : 'The trenches require a clear mask. Update your visual identity to stand with the survivors.'}
                 </p>
               </div>
               
@@ -58,7 +65,7 @@ export const IdentityInitiation: React.FC<IdentityInitiationProps> = ({ onIdenti
                   onClick={() => fileInputRef.current?.click()}
                   className="px-10 py-5 bg-[#3A5F3D] text-white font-black text-xl uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_10px_30px_rgba(58,95,61,0.3)] rounded-xl"
                 >
-                  Upload Visual
+                  {isConfirmed ? 'RE-FORGE IDENTITY' : 'UPLOAD VISUAL'}
                 </button>
               ) : (
                 <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
@@ -66,13 +73,13 @@ export const IdentityInitiation: React.FC<IdentityInitiationProps> = ({ onIdenti
                     onClick={handleConfirm}
                     className="px-10 py-5 bg-[#3A5F3D] text-white font-black text-xl uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_10px_30px_rgba(58,95,61,0.3)] rounded-xl"
                   >
-                    Confirm Identity
+                    CONFIRM NEW MASK
                   </button>
                   <button 
                     onClick={() => setPreview(null)}
                     className="px-10 py-5 border-2 border-[#C1272D] text-[#C1272D] font-black text-xl uppercase tracking-widest hover:bg-[#C1272D] hover:text-white transition-all rounded-xl"
                   >
-                    Abort
+                    ABORT
                   </button>
                 </div>
               )}
@@ -87,8 +94,12 @@ export const IdentityInitiation: React.FC<IdentityInitiationProps> = ({ onIdenti
 
             <div className="w-full md:w-1/3 flex justify-center">
               <div className="relative w-64 h-64 border-4 border-white/10 rounded-3xl overflow-hidden bg-black shadow-2xl group cursor-pointer" onClick={() => !preview && fileInputRef.current?.click()}>
-                {preview ? (
-                  <img src={preview} alt="Survivor Identity Preview" className="w-full h-full object-cover animate-reveal" />
+                {displayImage ? (
+                  <img 
+                    src={displayImage} 
+                    alt="Survivor Identity" 
+                    className={`w-full h-full object-cover ${preview ? 'animate-reveal' : ''}`} 
+                  />
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center opacity-40 group-hover:opacity-100 transition-opacity">
                     <p className="text-[12px] font-black uppercase tracking-[0.3em] text-[#3A5F3D]">Add Character</p>

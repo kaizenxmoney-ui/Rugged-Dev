@@ -4,9 +4,16 @@ import React, { useEffect, useRef, useState } from 'react';
 interface RevealTextProps {
   children: React.ReactNode;
   className?: string;
+  direction?: 'up' | 'down' | 'left' | 'right' | 'scale' | 'none';
+  delay?: number;
 }
 
-export const RevealText: React.FC<RevealTextProps> = ({ children, className = "" }) => {
+export const RevealText: React.FC<RevealTextProps> = ({ 
+  children, 
+  className = "", 
+  direction = 'up',
+  delay = 0 
+}) => {
   const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -18,17 +25,20 @@ export const RevealText: React.FC<RevealTextProps> = ({ children, className = ""
           observer.unobserve(entry.target);
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
     );
 
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
   }, []);
 
+  const directionClass = direction !== 'none' ? `reveal-${direction}` : '';
+
   return (
     <div
       ref={ref}
-      className={`${className} reveal-hidden ${isVisible ? 'reveal-visible' : ''}`}
+      style={{ transitionDelay: `${delay}ms` }}
+      className={`${className} reveal-hidden ${directionClass} ${isVisible ? 'reveal-visible' : ''}`}
     >
       {children}
     </div>

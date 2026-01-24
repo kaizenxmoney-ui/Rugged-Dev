@@ -28,25 +28,27 @@ export const Tokenomics: React.FC = () => {
         </RevealText>
         
         <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          {Object.entries(TOKEN_INFO).map(([key, value]) => (
-            <div key={key} className="flex justify-between items-center p-4 sm:p-6 border border-[#6E6E6E]/20 bg-black hover:border-[#3A5F3D] transition-colors rounded-xl">
-              <span className="text-[10px] sm:text-xs font-bold text-[#6E6E6E] uppercase tracking-widest">{key.replace('_', ' ')}</span>
-              <span className="text-base sm:text-xl font-black text-[#F2F2F2] uppercase text-right">{value}</span>
-            </div>
+          {Object.entries(TOKEN_INFO).map(([key, value], idx) => (
+            <RevealText key={key} direction="scale" delay={idx * 50}>
+              <div className="flex justify-between items-center p-4 sm:p-6 border border-[#6E6E6E]/20 bg-black hover:border-[#3A5F3D] transition-colors rounded-xl">
+                <span className="text-[10px] sm:text-xs font-bold text-[#6E6E6E] uppercase tracking-widest">{key.replace('_', ' ')}</span>
+                <span className="text-base sm:text-xl font-black text-[#F2F2F2] uppercase text-right">{value}</span>
+              </div>
+            </RevealText>
           ))}
         </div>
 
-        <div className="mt-16 sm:mt-24 max-w-3xl mx-auto text-center p-6 sm:p-10 bg-white/5 border border-dashed border-white/10 rounded-2xl sm:rounded-3xl">
+        <RevealText direction="up" delay={500} className="mt-16 sm:mt-24 max-w-3xl mx-auto text-center p-6 sm:p-10 bg-white/5 border border-dashed border-white/10 rounded-2xl sm:rounded-3xl">
            <h3 className="text-white font-black text-2xl sm:text-3xl mb-4 sm:mb-6 uppercase tracking-tighter italic">Statement of Intent</h3>
            <div className="space-y-4 text-sm sm:text-base text-[#6E6E6E] font-medium leading-relaxed">
               <p>RuggedDev is an origin, not a guarantee. We make no promise of success or profit. Our only commitment is to structural integrity.</p>
               <p className="text-white font-black text-lg sm:text-xl uppercase tracking-tighter">Survivor Experiment</p>
               <p>A coordination-led experiment in incentive physics. No dev leverage, no paid hype, no exit-liquidity. Only the protocol survives.</p>
            </div>
-        </div>
+        </RevealText>
         
         <div className="mt-16 sm:mt-24 flex flex-col items-center w-full">
-          <div className="group relative flex flex-col sm:flex-row items-center gap-4 bg-black border-2 border-[#3A5F3D]/30 p-4 sm:p-6 rounded-2xl hover:border-[#3A5F3D] transition-all w-full max-w-2xl">
+          <RevealText direction="scale" delay={600} className="group relative flex flex-col sm:flex-row items-center gap-4 bg-black border-2 border-[#3A5F3D]/30 p-4 sm:p-6 rounded-2xl hover:border-[#3A5F3D] transition-all w-full max-w-2xl">
             <div className="flex flex-col w-full text-center sm:text-left overflow-hidden">
               <span className="text-[9px] sm:text-[10px] font-black text-[#3A5F3D] uppercase tracking-[0.2em] mb-1">Survivor Contract Address</span>
               <p className="text-[#3A5F3D] font-black text-sm sm:text-2xl font-mono tracking-tight animate-pulse break-all">
@@ -79,8 +81,10 @@ export const Tokenomics: React.FC = () => {
                 <span className="text-[10px] font-black uppercase">TRADE</span>
               </button>
             </div>
-          </div>
-          <p className="mt-4 text-[9px] font-bold text-[#6E6E6E] uppercase tracking-[0.3em] opacity-50 italic">Verified for Trench Combat</p>
+          </RevealText>
+          <RevealText direction="up" delay={700}>
+            <p className="mt-4 text-[9px] font-bold text-[#6E6E6E] uppercase tracking-[0.3em] opacity-50 italic">Verified for Trench Combat</p>
+          </RevealText>
         </div>
       </div>
     </section>

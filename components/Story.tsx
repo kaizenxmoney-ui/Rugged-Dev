@@ -1,16 +1,9 @@
 
 import React, { useState } from 'react';
 import { RevealText } from './RevealText';
-import { OFFICIAL_STORY_IMAGE } from '../constants';
 
-interface StoryProps {
-  baseImage?: string; // Prop kept for signature compatibility but ignored for absolute permanence
-}
-
-export const Story: React.FC<StoryProps> = () => {
-  // Permanently set to the official mascot URL from constants. 
-  // This ensures the Story section profile never changes or disappears.
-  const imgSrc = OFFICIAL_STORY_IMAGE;
+export const Story: React.FC = () => {
+  const imgSrc = "https://raw.githubusercontent.com/kaizenxmoney-ui/Rugged-Dev/main/ruggeddev.png";
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -20,7 +13,7 @@ export const Story: React.FC<StoryProps> = () => {
       <div className="container mx-auto px-4 relative z-10 max-w-7xl">
         <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-32">
           
-          <div className="flex-1 order-2 lg:order-1 relative w-full flex justify-center">
+          <RevealText direction="left" className="flex-1 order-2 lg:order-1 relative w-full flex justify-center">
             <div 
               className="relative group w-full max-w-lg"
               onMouseEnter={() => setIsHovered(true)}
@@ -38,6 +31,9 @@ export const Story: React.FC<StoryProps> = () => {
                     alt="Survivor Mascot" 
                     className="w-full h-full object-cover grayscale brightness-75 transition-all duration-1000 group-hover:grayscale-0 group-hover:brightness-100"
                     loading="eager"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "https://raw.githubusercontent.com/kaizenxmoney-ui/Rugged-Dev/main/ruggeddev.png";
+                    }}
                   />
                   
                   <div className={`absolute inset-0 pointer-events-none transition-opacity duration-700 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
@@ -63,15 +59,15 @@ export const Story: React.FC<StoryProps> = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </RevealText>
 
           <div className="flex-1 order-1 lg:order-2 space-y-12">
             <div className="space-y-4">
-              <div className="flex items-center gap-4">
+              <RevealText direction="right" className="flex items-center gap-4">
                 <span className="w-16 h-[2px] bg-rugged-red"></span>
                 <span className="font-mono text-rugged-red font-black text-xs tracking-[0.4em] uppercase">The Physics of Fairness</span>
-              </div>
-              <RevealText>
+              </RevealText>
+              <RevealText direction="right" delay={100}>
                 <h2 className="text-6xl md:text-8xl font-black tracking-tighter leading-[0.9] text-white italic uppercase">
                   Incentive <br/> 
                   <span className="text-rugged-green not-italic">Integrity</span>
@@ -80,26 +76,30 @@ export const Story: React.FC<StoryProps> = () => {
             </div>
             
             <div className="space-y-10 text-xl md:text-2xl leading-relaxed text-[#F2F2F2]/70 font-medium">
-              <div className="relative pl-10 border-l-4 border-rugged-gray/20">
+              <RevealText direction="up" delay={200} className="relative pl-10 border-l-4 border-rugged-gray/20">
                 <p>
                   Crypto failures are not accidental. They are the logical outcome of <span className="text-white font-black underline decoration-rugged-red decoration-4 underline-offset-8">broken incentive structures.</span>
                 </p>
-              </div>
+              </RevealText>
               
-              <p>
-                Asymmetry defines most projects: bloated dev wallets and artificial hype. When the incentives favor the few over the many survivors, the system inevitably collapses.
-              </p>
+              <RevealText direction="up" delay={300}>
+                <p>
+                  Asymmetry defines most projects: bloated dev wallets and artificial hype. When the incentives favor the few over the many survivors, the system inevitably collapses.
+                </p>
+              </RevealText>
 
-              <p>
-                <span className="text-white font-black italic">RuggedDev</span> is a survivor-led experiment. By capping the dev entry at $20 and refusing all paid marketing, we remove the leverage that leads to rugs. The creator is just another participant in the trench.
-              </p>
+              <RevealText direction="up" delay={400}>
+                <p>
+                  <span className="text-white font-black italic">RuggedDev</span> is a survivor-led experiment. By capping the dev entry at $20 and refusing all paid marketing, we remove the leverage that leads to rugs. The creator is just another participant in the trench.
+                </p>
+              </RevealText>
 
-              <div className="pt-10 flex flex-col gap-6">
+              <RevealText direction="scale" delay={500} className="pt-10 flex flex-col gap-6">
                 <div className="bg-white/5 p-6 rounded-2xl border border-white/5 font-mono text-[11px] md:text-xs text-rugged-gray uppercase tracking-widest leading-loose">
                   [ ANALYSIS ] <br/>
                   "IF THE CREATOR CANNOT DUMP, THE PHYSICS OF THE TOKEN SHIFT FROM EXIT-LIQUIDITY TO SUSTAINABLE COORDINATION."
                 </div>
-              </div>
+              </RevealText>
             </div>
           </div>
 
