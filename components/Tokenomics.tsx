@@ -6,13 +6,18 @@ import { sounds } from '../utils/sounds';
 
 export const Tokenomics: React.FC = () => {
   const [copied, setCopied] = useState(false);
-  const contractAddress = "11111111111111111111111111111111111";
+  const contractAddress = "2Z2d9kY4F8L7GJAEdv7n7zWBDGmgvrefWJjFVxzzpump";
 
   const handleCopy = () => {
     sounds.playClick();
     navigator.clipboard.writeText(contractAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handlePumpLink = () => {
+    sounds.playClick();
+    window.open(`https://pump.fun/coin/${contractAddress}`, '_blank');
   };
 
   return (
@@ -49,23 +54,31 @@ export const Tokenomics: React.FC = () => {
               </p>
             </div>
             
-            <button 
-              onClick={handleCopy}
-              className={`w-full sm:w-auto flex-shrink-0 p-3 sm:p-4 border-2 transition-all flex items-center justify-center min-w-[80px] sm:min-w-[100px] rounded-xl ${
-                copied 
-                  ? 'bg-[#3A5F3D] border-[#3A5F3D] text-white' 
-                  : 'bg-transparent border-[#3A5F3D] text-[#3A5F3D] hover:bg-[#3A5F3D] hover:text-white'
-              }`}
-            >
-              {copied ? (
-                <span className="text-[10px] font-black uppercase">Copied</span>
-              ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-              )}
-            </button>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <button 
+                onClick={handleCopy}
+                className={`flex-1 sm:flex-none p-3 sm:p-4 border-2 transition-all flex items-center justify-center min-w-[80px] sm:min-w-[100px] rounded-xl ${
+                  copied 
+                    ? 'bg-[#3A5F3D] border-[#3A5F3D] text-white' 
+                    : 'bg-transparent border-[#3A5F3D] text-[#3A5F3D] hover:bg-[#3A5F3D] hover:text-white'
+                }`}
+              >
+                {copied ? (
+                  <span className="text-[10px] font-black uppercase">Copied</span>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                )}
+              </button>
+              <button 
+                onClick={handlePumpLink}
+                className="flex-1 sm:flex-none p-3 sm:p-4 border-2 border-rugged-red bg-transparent text-rugged-red hover:bg-rugged-red hover:text-white transition-all flex items-center justify-center min-w-[80px] sm:min-w-[100px] rounded-xl"
+              >
+                <span className="text-[10px] font-black uppercase">TRADE</span>
+              </button>
+            </div>
           </div>
           <p className="mt-4 text-[9px] font-bold text-[#6E6E6E] uppercase tracking-[0.3em] opacity-50 italic">Verified for Trench Combat</p>
         </div>

@@ -3,11 +3,13 @@ import React from 'react';
 import { RevealText } from './RevealText';
 
 export const Community: React.FC = () => {
+  const CA = "2Z2d9kY4F8L7GJAEdv7n7zWBDGmgvrefWJjFVxzzpump";
+  
   const links = [
     { name: 'X / TWITTER', url: 'https://x.com/RuggedDevSol', color: '#3A5F3D' },
-    { name: 'PUMP.FUN', url: '#', color: '#C1272D' },
-    { name: 'DEX SCREENER', url: '#', color: '#6E6E6E' },
-    { name: 'DEX TOOLS', url: '#', color: '#6E6E6E' },
+    { name: 'PUMP.FUN', url: `https://pump.fun/coin/${CA}`, color: '#C1272D' },
+    { name: 'DEX SCREENER', url: 'https://dexscreener.com/solana/fw4oz2cllajre35dsglcudxwnsarm25pemvi16og3f7m', color: '#6E6E6E' },
+    { name: 'DEX TOOLS', url: 'https://www.dextools.io/app/solana/pair-explorer/2Z2d9kY4F8L7GJAEdv7n7zWBDGmgvrefWJjFVxzzpump', color: '#6E6E6E' },
   ];
 
   return (

@@ -12,6 +12,7 @@ export const Hero: React.FC<HeroProps> = ({ baseImage, onTriggerEasterEgg }) => 
   const [isRugging, setIsRugging] = useState(false);
   const [imgSrc, setImgSrc] = useState(baseImage);
   const [clickCount, setClickCount] = useState(0);
+  const contractAddress = "2Z2d9kY4F8L7GJAEdv7n7zWBDGmgvrefWJjFVxzzpump";
 
   React.useEffect(() => {
     setImgSrc(baseImage);
@@ -37,6 +38,7 @@ export const Hero: React.FC<HeroProps> = ({ baseImage, onTriggerEasterEgg }) => 
 
   const handleBuyClick = () => {
     sounds.playClick();
+    window.open(`https://pump.fun/coin/${contractAddress}`, '_blank');
   };
 
   const candles = useMemo(() => {
@@ -138,7 +140,7 @@ export const Hero: React.FC<HeroProps> = ({ baseImage, onTriggerEasterEgg }) => 
               onClick={handleBuyClick} 
               className="w-full sm:w-auto px-6 sm:px-12 py-3 sm:py-6 bg-[#3A5F3D] text-white font-black text-base sm:text-xl shadow-2xl transition-all"
             >
-               <span className="relative z-10 uppercase tracking-[0.1em]">Verify Contract</span>
+               <span className="relative z-10 uppercase tracking-[0.1em]">BUY ON PUMP.FUN</span>
             </button>
             <button onClick={triggerRug} className="w-full sm:w-auto px-6 sm:px-12 py-3 sm:py-6 border-2 sm:border-4 border-[#C1272D] text-[#C1272D] font-black text-base sm:text-xl transition-all hover:bg-[#C1272D] hover:text-white active:scale-95 group overflow-hidden">
               <span className="relative z-10 uppercase">{isRugging ? 'DUMPING...' : 'Simulate Rugged'}</span>
