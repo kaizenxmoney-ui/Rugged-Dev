@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Hero } from './components/Hero';
 import { Story } from './components/Story';
@@ -177,7 +176,7 @@ const App: React.FC = () => {
       
       <IdentityInitiation onIdentitySet={handleSetCustomCharacter} />
       
-      <Story baseImage={FALLBACK_IMAGE} />
+      <Story baseImage={baseCharacter} />
       <Transparency />
       <AILab 
         baseImage={baseCharacter} 
