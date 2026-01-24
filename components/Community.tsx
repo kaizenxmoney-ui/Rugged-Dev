@@ -59,10 +59,20 @@ export const Community: React.FC = () => {
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = `0 10px 40px -10px ${link.color}88`;
+                e.currentTarget.style.backgroundColor = `${link.color}11`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.backgroundColor = 'black';
+              }}
               style={{ borderColor: link.color }}
-              className="py-10 border-4 bg-black text-white font-black text-2xl hover:scale-105 transition-all flex items-center justify-center hover:bg-white/5 rounded-2xl"
+              className="py-10 border-4 bg-black text-white font-black text-2xl hover:scale-[1.03] transition-all duration-300 flex items-center justify-center rounded-2xl group"
             >
-              {link.name}
+              <span className="group-hover:tracking-widest transition-all duration-300">
+                {link.name}
+              </span>
             </a>
           ))}
         </div>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { RevealText } from './RevealText';
 import { sounds } from '../utils/sounds';
@@ -7,7 +6,6 @@ export const FAQ: React.FC = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const faqs = [
-    { q: "Is there a presale or whitelist?", a: "None. RuggedDev launched through pump.fun with zero insiders. All participants had identical entry conditions from block one." },
     { q: "Does the dev hold hidden wallets?", a: "No. The $20 launch entry is verifiable. There are no secondary allocations or hidden team tokens. The creator is a participant, not a ruler." },
     { q: "How is growth possible without marketing?", a: "Coordination. We provide the Visual Forge and Propaganda Lab. Growth is an organic measurement of survivor energy, not a dev's budget." },
     { q: "Is this financial advice?", a: "No. RuggedDev is an experiment in structural integrity. It is high risk, high transparency, and built for those who understand the reality of the trench." },
