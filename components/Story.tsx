@@ -1,26 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { RevealText } from './RevealText';
 import { FALLBACK_IMAGE } from '../constants';
 
 interface StoryProps {
-  baseImage: string;
+  baseImage: string; // Keep prop to avoid breaking App.tsx, but ignore it for the profile image
 }
 
-export const Story: React.FC<StoryProps> = ({ baseImage }) => {
-  const [imgSrc, setImgSrc] = useState(
-  baseImage && baseImage !== FALLBACK_IMAGE
-    ? baseImage
-    : "https://raw.githubusercontent.com/kaizenxmoney-ui/Rugged-Dev/main/ruggeddev.png"
-);
+export const Story: React.FC<StoryProps> = () => {
+  // Permanently set to the official mascot URL as requested
+  const imgSrc = "https://raw.githubusercontent.com/kaizenxmoney-ui/Rugged-Dev/main/ruggeddev.png";
   const [isHovered, setIsHovered] = useState(false);
-
-  useEffect(() => {
-  if (baseImage && baseImage !== FALLBACK_IMAGE) {
-    setImgSrc(baseImage);
-  }
-}, [baseImage]);
-
 
   return (
     <section className="relative py-32 bg-[#0a0a0a] border-y-2 border-[#C1272D]/20 overflow-hidden">
@@ -46,7 +36,6 @@ export const Story: React.FC<StoryProps> = ({ baseImage }) => {
                     src={imgSrc} 
                     alt="Survivor Mascot" 
                     className="w-full h-full object-cover grayscale brightness-75 transition-all duration-1000 group-hover:grayscale-0 group-hover:brightness-100"
-                    onError={() => { if (imgSrc !== FALLBACK_IMAGE) setImgSrc(FALLBACK_IMAGE); }}
                   />
                   
                   <div className={`absolute inset-0 pointer-events-none transition-opacity duration-700 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
