@@ -5,7 +5,7 @@ import { RevealText } from './RevealText';
 export const Community: React.FC = () => {
   const links = [
     { name: 'X / TWITTER', url: 'https://x.com/RuggedDevSol', color: '#3A5F3D' },
-    { name: 'PUMP.FUN', url: '#', color: '#C1272D' },
+    { name: 'PUMP.FUN', url: 'https://pump.fun/coin/2Z2d9kY4F8L7GJAEdv7n7zWBDGmgvrefWJjFVxzzpump', color: '#C1272D' },
     { name: 'DEX SCREENER', url: '#', color: '#6E6E6E' },
     { name: 'DEX TOOLS', url: '#', color: '#6E6E6E' },
   ];
