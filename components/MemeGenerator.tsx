@@ -226,6 +226,18 @@ export const MemeGenerator: React.FC<MemeGeneratorProps> = ({ baseImage, onReset
               <label className="text-[8px] sm:text-[10px] font-black text-rugged-green uppercase tracking-[0.1em] sm:tracking-[0.2em]">Transmission</label>
               <input value={topText} onChange={(e) => setTopText(e.target.value)} placeholder="TOP" className="w-full bg-[#111] border border-white/10 p-2 sm:p-4 text-white font-black uppercase text-xs sm:text-lg rounded-lg focus:border-rugged-green outline-none" />
               <input value={bottomText} onChange={(e) => setBottomText(e.target.value)} placeholder="BOTTOM" className="w-full bg-[#111] border border-white/10 p-2 sm:p-4 text-white font-black uppercase text-xs sm:text-lg rounded-lg focus:border-rugged-green outline-none" />
+              
+              <div className="pt-2 space-y-1">
+                <label className="text-[7px] sm:text-[9px] font-black text-rugged-green uppercase tracking-widest">Text Size</label>
+                <input 
+                  type="range" 
+                  min="20" 
+                  max="200" 
+                  value={textSize} 
+                  onChange={(e) => setTextSize(parseInt(e.target.value))} 
+                  className="w-full accent-rugged-green" 
+                />
+              </div>
             </div>
 
             <div className="p-2 sm:p-6 bg-[#111] border border-rugged-red/20 rounded-lg space-y-2">

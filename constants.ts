@@ -14,7 +14,8 @@ export const FALLBACK_IMAGE = "https://pill-mcp.s3.us-west-2.amazonaws.com/rugge
 
 export const STORAGE_KEYS = {
   CUSTOM_CHARACTER: 'rugged_dev_custom_char',
-  CHARACTER_LOCKED: 'rugged_dev_char_locked'
+  CHARACTER_LOCKED: 'rugged_dev_char_locked',
+  GALLERY: 'rugged_dev_gallery_archive'
 };
 
 export const TOKEN_INFO = {

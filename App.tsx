@@ -38,9 +38,21 @@ const App: React.FC = () => {
       
       // Load custom character
       const storedChar = localStorage.getItem(STORAGE_KEYS.CUSTOM_CHARACTER);
-      
       if (storedChar) {
         setBaseCharacter(storedChar);
+      }
+
+      // Load persistent gallery
+      const storedGallery = localStorage.getItem(STORAGE_KEYS.GALLERY);
+      if (storedGallery) {
+        try {
+          const parsed = JSON.parse(storedGallery);
+          if (Array.isArray(parsed)) {
+            setGalleryImages(parsed);
+          }
+        } catch (e) {
+          console.error("Failed to load archive:", e);
+        }
       }
 
       setIsChecking(false);
@@ -48,9 +60,22 @@ const App: React.FC = () => {
     checkAuth();
   }, []);
 
+  // Sync gallery to localStorage whenever it changes
+  useEffect(() => {
+    if (!isChecking) {
+      try {
+        localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(galleryImages));
+      } catch (e) {
+        // Handle localStorage quota exceeded by keeping fewer images if necessary
+        console.warn("Storage quota warning: Archive may be too large.");
+      }
+    }
+  }, [galleryImages, isChecking]);
+
   const addToGallery = (imageUrl: string) => {
     setGalleryImages(prev => {
       if (prev.includes(imageUrl)) return prev;
+      // We keep up to 12 images to respect typical localStorage limits for base64 strings
       return [imageUrl, ...prev].slice(0, 12);
     });
   };

@@ -2,6 +2,7 @@
 import React, { useMemo, useRef } from 'react';
 import { RevealText } from './RevealText';
 import { FALLBACK_IMAGE } from '../constants';
+import { sounds } from '../utils/sounds';
 
 interface GalleryProps {
   images: string[];
@@ -21,6 +22,16 @@ export const Gallery: React.FC<GalleryProps> = ({ images, onDeleteImage }) => {
     }
     return base;
   }, [images]);
+
+  const handleDownload = (imgUrl: string, index: number) => {
+    sounds.playCommandClick();
+    const link = document.createElement('a');
+    link.href = imgUrl;
+    link.download = `rdev-archive-${index}-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const isLargeGallery = images.length > 6;
 
@@ -133,21 +144,40 @@ export const Gallery: React.FC<GalleryProps> = ({ images, onDeleteImage }) => {
                     <div className="absolute bottom-6 right-6 w-6 h-6 border-b-2 border-r-2 border-white/10 group-hover:border-rugged-green transition-colors"></div>
                   </div>
 
-                  {/* Delete Button */}
-                  {onDeleteImage && displayImg !== FALLBACK_IMAGE && (
+                  {/* Actions Overlay */}
+                  <div className="absolute top-4 left-4 z-30 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                    {/* Delete Button */}
+                    {onDeleteImage && displayImg !== FALLBACK_IMAGE && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteImage(i);
+                        }}
+                        className="bg-rugged-red text-white p-2 rounded-lg hover:scale-110 active:scale-95 shadow-xl border border-white/20"
+                        title="Purge Record"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                        </svg>
+                      </button>
+                    )}
+
+                    {/* Download Button */}
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        onDeleteImage(i);
+                        handleDownload(displayImg, i);
                       }}
-                      className="absolute top-4 left-4 z-30 bg-rugged-red text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110 active:scale-95 shadow-xl border border-white/20"
-                      title="Purge Record"
+                      className="bg-rugged-green text-white p-2 rounded-lg hover:scale-110 active:scale-95 shadow-xl border border-white/20"
+                      title="Download Propaganda"
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
                       </svg>
                     </button>
-                  )}
+                  </div>
 
                   {/* Visual Glitch Overlay */}
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-10 pointer-events-none transition-opacity bg-rugged-red"></div>
