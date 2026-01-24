@@ -16,17 +16,42 @@ import { IdentityInitiation } from './components/IdentityInitiation';
 import { FALLBACK_IMAGE, STORAGE_KEYS } from './constants';
 import { sounds } from './utils/sounds';
 
-// Simple IndexedDB wrapper for large image storage
+// Persistent Storage Layer using IndexedDB for large image data
 const initDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('RuggedDevArchive', 1);
-    request.onupgradeneeded = () => {
+    const request = indexedDB.open('RuggedDevArchive_v2', 2);
+    request.onupgradeneeded = (event) => {
       const db = request.result;
       if (!db.objectStoreNames.contains('gallery')) {
         db.createObjectStore('gallery', { keyPath: 'id', autoIncrement: true });
       }
+      if (!db.objectStoreNames.contains('identity')) {
+        db.createObjectStore('identity', { keyPath: 'key' });
+      }
     };
     request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const saveIdentityToDB = async (imageUrl: string) => {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('identity', 'readwrite');
+    const store = tx.objectStore('identity');
+    store.put({ key: 'current_user_id', image: imageUrl });
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  });
+};
+
+const getIdentityFromDB = async (): Promise<string | null> => {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('identity', 'readonly');
+    const store = tx.objectStore('identity');
+    const request = store.get('current_user_id');
+    request.onsuccess = () => resolve(request.result?.image || null);
     request.onerror = () => reject(request.error);
   });
 };
@@ -49,7 +74,6 @@ const getFromDB = async (): Promise<string[]> => {
     const store = tx.objectStore('gallery');
     const request = store.getAll();
     request.onsuccess = () => {
-      // Return sorted by timestamp descending
       const results = request.result.sort((a, b) => b.timestamp - a.timestamp);
       resolve(results.map((r: any) => r.image));
     };
@@ -86,7 +110,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const hydrate = async () => {
-      // 1. Check API Key
+      // 1. Check API Authorization
       if (typeof window.aistudio !== 'undefined') {
         const hasKey = await window.aistudio.hasSelectedApiKey();
         setIsAuthorized(hasKey);
@@ -94,21 +118,25 @@ const App: React.FC = () => {
         setIsAuthorized(true);
       }
       
-      // 2. Load custom character from localStorage (smaller string)
-      const storedChar = localStorage.getItem(STORAGE_KEYS.CUSTOM_CHARACTER);
-      if (storedChar) {
-        setBaseCharacter(storedChar);
-        setMemeBaseImage(storedChar);
+      // 2. Load custom identity from IndexedDB (Bypasses localStorage size limits)
+      try {
+        const storedIdentity = await getIdentityFromDB();
+        if (storedIdentity) {
+          setBaseCharacter(storedIdentity);
+          setMemeBaseImage(storedIdentity);
+        }
+      } catch (e) {
+        console.error("Identity hydration failed:", e);
       }
 
-      // 3. Load Gallery from IndexedDB (Much more reliable for large base64)
+      // 3. Load Gallery Archive from IndexedDB
       try {
         const dbImages = await getFromDB();
         if (dbImages && dbImages.length > 0) {
           setGalleryImages(dbImages);
         }
       } catch (e) {
-        console.error("Archive retrieval failed:", e);
+        console.error("Archive hydration failed:", e);
       }
 
       setIsChecking(false);
@@ -118,11 +146,7 @@ const App: React.FC = () => {
 
   const addToGallery = async (imageUrl: string) => {
     if (galleryImages.includes(imageUrl)) return;
-    
-    // Update local state
     setGalleryImages(prev => [imageUrl, ...prev]);
-    
-    // Persist to IndexedDB
     try {
       await saveToDB(imageUrl);
     } catch (e) {
@@ -134,7 +158,6 @@ const App: React.FC = () => {
     sounds.playClick();
     const target = galleryImages[index];
     setGalleryImages(prev => prev.filter((_, i) => i !== index));
-    
     try {
       await deleteFromDB(target);
     } catch (e) {
@@ -142,10 +165,14 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSetCustomCharacter = (imageUrl: string) => {
+  const handleSetCustomCharacter = async (imageUrl: string) => {
     setBaseCharacter(imageUrl);
     setMemeBaseImage(imageUrl);
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_CHARACTER, imageUrl);
+    try {
+      await saveIdentityToDB(imageUrl);
+    } catch (e) {
+      console.error("Identity save failed:", e);
+    }
     sounds.playNeutralBlip();
   };
 
@@ -168,11 +195,7 @@ const App: React.FC = () => {
   const triggerEasterEgg = () => {
     setEasterEggPhase('rugged');
     sounds.playRug();
-    
-    setTimeout(() => {
-      setEasterEggPhase('recovery');
-    }, 2000);
-
+    setTimeout(() => setEasterEggPhase('recovery'), 2000);
     setTimeout(() => {
       setEasterEggPhase('none');
       setShowGame(true);

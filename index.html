@@ -25,7 +25,7 @@
         overflow-x: hidden;
       }
 
-      /* Tactical Grain Overlay */
+      /* Tactical Grain Overlay - Essential for the "Trench" aesthetic */
       body::after {
         content: "";
         position: fixed;
@@ -52,7 +52,7 @@
 
       @keyframes scan {
         0% { transform: translate3d(0, 0, 0); }
-        100% { transform: translate3d(0, 1000%, 0); }
+        100% { transform: translate3d(0, 100%, 0); }
       }
 
       @keyframes shake {
@@ -82,25 +82,25 @@
         animation: float 5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
       }
 
-      /* Unified Reveal System */
+      /* Unified Reveal System for Engaging Scroll Transitions */
       .reveal-hidden {
         opacity: 0;
-        transition: all 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
         will-change: transform, opacity;
       }
       
-      .reveal-up { transform: translate3d(0, 40px, 0); }
-      .reveal-down { transform: translate3d(0, -40px, 0); }
-      .reveal-left { transform: translate3d(-40px, 0, 0); }
-      .reveal-right { transform: translate3d(40px, 0, 0); }
-      .reveal-scale { transform: scale(0.95); }
+      .reveal-up { transform: translate3d(0, 60px, 0); }
+      .reveal-down { transform: translate3d(0, -60px, 0); }
+      .reveal-left { transform: translate3d(-60px, 0, 0); }
+      .reveal-right { transform: translate3d(60px, 0, 0); }
+      .reveal-scale { transform: scale(0.92); }
 
       .reveal-visible {
-        opacity: 1;
-        transform: translate3d(0, 0, 0) scale(1);
+        opacity: 1 !important;
+        transform: translate3d(0, 0, 0) scale(1) !important;
       }
 
-      /* Staggered Delays */
+      /* Staggered Delays for Dynamic Feel */
       .delay-100 { transition-delay: 100ms; }
       .delay-200 { transition-delay: 200ms; }
       .delay-300 { transition-delay: 300ms; }

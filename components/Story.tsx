@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { RevealText } from './RevealText';
 
 export const Story: React.FC = () => {
+  // Absolute permanent URL for the mascot. 
+  // This is hardcoded to prevent any state-based disappearance or removal.
   const imgSrc = "https://raw.githubusercontent.com/kaizenxmoney-ui/Rugged-Dev/main/ruggeddev.png";
   const [isHovered, setIsHovered] = useState(false);
 
@@ -32,6 +34,7 @@ export const Story: React.FC = () => {
                     className="w-full h-full object-cover grayscale brightness-75 transition-all duration-1000 group-hover:grayscale-0 group-hover:brightness-100"
                     loading="eager"
                     onError={(e) => {
+                      // Forced fallback in case of direct link network issues
                       (e.target as HTMLImageElement).src = "https://raw.githubusercontent.com/kaizenxmoney-ui/Rugged-Dev/main/ruggeddev.png";
                     }}
                   />
