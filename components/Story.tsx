@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { RevealText } from './RevealText';
 import { FALLBACK_IMAGE } from '../constants';
@@ -7,14 +8,19 @@ interface StoryProps {
 }
 
 export const Story: React.FC<StoryProps> = ({ baseImage }) => {
-  const [imgSrc, setImgSrc] = useState(baseImage || FALLBACK_IMAGE);
+  const [imgSrc, setImgSrc] = useState(
+  baseImage && baseImage !== FALLBACK_IMAGE
+    ? baseImage
+    : "https://raw.githubusercontent.com/kaizenxmoney-ui/Rugged-Dev/main/ruggeddev.png"
+);
   const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
-    if (baseImage) {
-      setImgSrc(baseImage);
-    }
-  }, [baseImage]);
+  if (baseImage && baseImage !== FALLBACK_IMAGE) {
+    setImgSrc(baseImage);
+  }
+}, [baseImage]);
+
 
   return (
     <section className="relative py-32 bg-[#0a0a0a] border-y-2 border-[#C1272D]/20 overflow-hidden">
