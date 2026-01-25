@@ -19,7 +19,7 @@ export const Story: React.FC = () => {
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
             >
-              {/* This frame is the primary profile section for the character */}
+              {/* Permanent Visual Record Frame */}
               <div className="relative p-6 pb-24 bg-[#F2F2F2] shadow-[0_50px_100px_rgba(0,0,0,0.9)] rotate-[-3deg] transition-all duration-700 group-hover:rotate-0 group-hover:scale-[1.02] border border-black/10 rounded-sm overflow-hidden text-black">
                 <div className="flex justify-between items-center mb-6 px-2 text-black/40 font-mono text-[10px] uppercase font-black">
                    <span>ID: ORIGIN_UNIT</span>
@@ -28,15 +28,18 @@ export const Story: React.FC = () => {
 
                 <div className="relative aspect-square w-full shadow-inner bg-neutral-900 rounded-sm overflow-hidden flex items-center justify-center border-4 border-black/5">
                   <img 
-                    key="permanent-mascot-img"
+                    key="permanent-mascot-img-v1"
                     src={OFFICIAL_STORY_IMAGE} 
                     alt="Survivor Mascot" 
                     className="w-full h-full object-cover grayscale brightness-75 transition-all duration-1000 group-hover:grayscale-0 group-hover:brightness-100"
                     loading="eager"
                     decoding="sync"
                     onError={(e) => {
-                      // Heavy-handed fallback to ensure it never disappears
-                      (e.target as HTMLImageElement).src = OFFICIAL_STORY_IMAGE;
+                      // Forced refresh to GitHub raw if it fails
+                      const target = e.target as HTMLImageElement;
+                      if (target.src !== OFFICIAL_STORY_IMAGE) {
+                        target.src = OFFICIAL_STORY_IMAGE;
+                      }
                     }}
                   />
                   

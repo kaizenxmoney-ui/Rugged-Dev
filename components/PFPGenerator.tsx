@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
-import { FALLBACK_IMAGE } from '../constants';
+import { FALLBACK_IMAGE, OFFICIAL_STORY_IMAGE } from '../constants';
 import { RevealText } from './RevealText';
 import { sounds } from '../utils/sounds';
 
@@ -32,14 +32,13 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
 
   const getBase64FromUrl = async (url: string): Promise<string> => {
     if (url.startsWith('data:')) return url.split(',')[1];
+    // Special case: If default image, we don't need base64 as AI uses text description
+    if (url === OFFICIAL_STORY_IMAGE) return '';
     const response = await fetch(url);
     const blob = await response.blob();
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = (reader.result as string).split(',')[1];
-        resolve(base64String);
-      };
+      reader.onloadend = () => { resolve((reader.result as string).split(',')[1]); };
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
@@ -54,23 +53,16 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
       } catch (err: any) {
         lastError = err;
         const msg = (err?.message || String(err)).toLowerCase();
-        
         if (msg.includes("requested entity was not found")) {
-          setApiError("Intel Key Invalid: Project or Billing Missing. Re-select your paid API key.");
-          if (typeof window.aistudio !== 'undefined') {
-            window.aistudio.openSelectKey();
-          }
+          setApiError("Intel Key Invalid. Re-select your paid API key.");
           throw err;
         }
-
-        if ((err?.status === 503 || err?.status === 429 || msg.includes("overloaded") || msg.includes("rate limit")) && i < maxRetries - 1) {
+        if ((err?.status === 503 || err?.status === 429 || msg.includes("overloaded")) && i < maxRetries - 1) {
           await new Promise(r => setTimeout(r, Math.pow(2, i) * 1500));
           continue;
         }
         throw err;
-      } finally {
-        setIsRetrying(false);
-      }
+      } finally { setIsRetrying(false); }
     }
     throw lastError;
   };
@@ -80,20 +72,14 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
     if (file) {
       sounds.playClick();
       const reader = new FileReader();
-      reader.onload = (event) => {
-        setPfpImage(event.target?.result as string);
-        setHasImage(true);
-      };
+      reader.onload = (event) => { setPfpImage(event.target?.result as string); setHasImage(true); };
       reader.readAsDataURL(file);
     }
   };
 
   const handleOpenKey = async () => {
     sounds.playCommandClick();
-    if (typeof window.aistudio !== 'undefined') {
-      await window.aistudio.openSelectKey();
-      setApiError(null);
-    }
+    if (typeof window.aistudio !== 'undefined') { await window.aistudio.openSelectKey(); setApiError(null); }
   };
 
   const generatePFP = async () => {
@@ -107,34 +93,19 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
         const model = 'gemini-3-pro-image-preview';
         
         const identityPrompt = `
-          INSTRUCTION: You MUST use Google Search to accurately reference any real-world brand logos, crypto project logos (e.g., Solana, Phantom, Ledger), or specific meme templates mentioned in the prompt.
-
-          CHARACTER IDENTITY:
-          A RuggedDev Wojak survivor character. 
-          Variations: Can be male or female. 
-          Shared Appearance: Pale off-white Wojak face, droopy tired eyes, dark circles, small nose, flat neutral mouth.
-          Expression: Tired, numb, observant. Never smiling. Never heroic. Identical head shape for the specific character type.
-          Proportions: Realistic adult human body proportions. Head proportional to body. Grounded anatomy.
-          Art Style: Extremely simple and crude art style. Very thick black outlines. Lines are uneven, wobbly, and inconsistent. Looks hand-drawn quickly with no cleanup. No smooth curves. Line work feels shaky and unpolished. Plain internet meme illustration style.
-          Coloring: Flat and simple single-color fills. No gradients, no lighting effects.
-          Color Palette: Muted colors (olive green, dull browns, warm off-white, dusty grays). No neon.
-          Clothing: Simple military worn outfit and helmet. Helmet ALWAYS has rough, messy, hand-written "SURVIVOR" text.
-          
-          INTEGRATION: If a logo is retrieved via search, render it in this same crude, shaky, hand-drawn style.
-          
-          PFP Traits: ${forgePrompt}.
-          Constraint: Only one character.
-          
-          NEGATIVE PROMPT:
-          No clean line art, no smooth outlines, no polished illustration, no digital painting, no soft shading, no gradients, no lighting effects, no cinematic look, no realism in rendering, no anime, no 3D, no vector art, no "professional" style, no excitement.
+          INSTRUCTION: Use Google Search for accurate logos/brands requested.
+          IDENTITY: The RuggedDev Wojak survivor. 
+          TRAITS: Pale Wojak face, extremely tired droopy eyes with dark circles, neutral mouth.
+          GEAR: Olive military helmet with crude hand-written 'SURVIVOR'.
+          ART STYLE: Extremely crude, simple hand-drawn internet meme style. Thick wobbly black outlines. Shaky lines. Flat single-color fills. No gradients or soft shading.
+          PFP VARIATION: ${forgePrompt}.
+          MANDATORY: One single character. Maintain the shaky, unpolished crude drawing look.
         `.trim();
         
         const config: any = {
-          imageConfig: { 
-            aspectRatio: aspectRatio as any,
-            imageSize: imageSize as any
-          },
-          tools: [{ googleSearch: {} }] // Enabled for logo/real-world asset accuracy
+          imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any },
+          // Fixed: tool name for gemini-3-pro-image-preview is google_search
+          tools: [{ google_search: {} }]
         };
 
         return await ai.models.generateContent({
@@ -144,47 +115,20 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
         }) as GenerateContentResponse;
       });
 
-      if (!response.candidates?.[0]) {
-        throw new Error("Forge blocked by safety filters.");
-      }
-
       let foundImageUrl: string | null = null;
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          foundImageUrl = `data:image/png;base64,${part.inlineData.data}`;
-          break;
+      if (response.candidates?.[0]) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData) {
+            foundImageUrl = `data:image/png;base64,${part.inlineData.data}`;
+            break;
+          }
         }
       }
 
-      if (foundImageUrl) {
-        setPfpImage(foundImageUrl);
-        setHasImage(true);
-        sounds.playNeutralBlip();
-      } else {
-        throw new Error("No identity data forged.");
-      }
-    } catch (err: any) {
-      setApiError(err.message || "Forge Error. Signal lost in trenches.");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleAddToGallery = () => {
-    if (canvasRef.current && onImageGenerated) {
-      const url = canvasRef.current.toDataURL('image/png');
-      onImageGenerated(url);
-      sounds.playCommandClick();
-    }
-  };
-
-  const downloadPFP = () => {
-    if (!canvasRef.current) return;
-    sounds.playCommandClick();
-    const link = document.createElement('a');
-    link.download = `rugged-identity-${Date.now()}.png`;
-    link.href = canvasRef.current.toDataURL('image/png');
-    link.click();
+      if (foundImageUrl) { setPfpImage(foundImageUrl); setHasImage(true); sounds.playNeutralBlip(); }
+      else { throw new Error("Forge blocked by safety filters."); }
+    } catch (err: any) { setApiError(err.message || "Forge Error. Signal lost."); }
+    finally { setIsGenerating(false); }
   };
 
   const editPFP = async () => {
@@ -198,45 +142,38 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
       
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const identityLock = `
-          Modify the input RuggedDev Wojak image.
-          Identity: Pale face, tired eyes, helmet with 'SURVIVOR'. Realistic human body proportions. Male or Female variation as specified.
-          EDIT: ${editPrompt}. 
-          Maintain extremely crude meme art style with thick wobbly black outlines.
-        `.trim();
+        const characterLock = `Modify RuggedDev Wojak image. Keep tired eyes, helmet with 'SURVIVOR'. Maintain crude meme style with thick lines. EDIT: ${editPrompt}.`;
         
         return await ai.models.generateContent({
           model: 'gemini-2.5-flash-image',
           contents: {
               parts: [
                 { inlineData: { data: base64Data, mimeType: mimeType } },
-                { text: identityLock }
+                { text: characterLock }
               ]
           }
         }) as GenerateContentResponse;
       });
 
-      if (!response.candidates?.[0]) {
-        throw new Error("Morph blocked by safety filters.");
-      }
-
       let foundImageUrl: string | null = null;
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          foundImageUrl = `data:image/png;base64,${part.inlineData.data}`;
-          break;
+      if (response.candidates?.[0]) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData) {
+            foundImageUrl = `data:image/png;base64,${part.inlineData.data}`;
+            break;
+          }
         }
       }
+      if (foundImageUrl) { setPfpImage(foundImageUrl); sounds.playNeutralBlip(); }
+    } catch (err: any) { setApiError(err.message || "Modification Failed."); }
+    finally { setIsEditing(false); setEditPrompt(''); }
+  };
 
-      if (foundImageUrl) {
-        setPfpImage(foundImageUrl);
-        sounds.playNeutralBlip();
-      }
-    } catch (err: any) {
-      setApiError(err.message || "Modification Failed.");
-    } finally {
-      setIsEditing(false);
-      setEditPrompt('');
+  // Fixed: Added missing handleAddToGallery function
+  const handleAddToGallery = () => {
+    if (canvasRef.current && onImageGenerated) {
+      onImageGenerated(canvasRef.current.toDataURL('image/png'));
+      sounds.playCommandClick();
     }
   };
 
@@ -247,37 +184,24 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
     if (!ctx) return;
     setIsDrawing(true);
     const currentLoadId = ++loadCountRef.current;
-    const width = 1000;
-    const ratioParts = aspectRatio.split(':').map(Number);
-    const height = Math.floor((width * (ratioParts[1] || 1)) / (ratioParts[0] || 1));
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       if (currentLoadId !== loadCountRef.current) return;
-      canvas.width = width; canvas.height = height; ctx.clearRect(0, 0, width, height); ctx.save();
-      if (frameType === 'circle') { ctx.beginPath(); ctx.arc(width/2, height/2, Math.min(width, height)/2, 0, Math.PI*2); ctx.clip(); }
-      const imgAspect = img.width/img.height; const canvasAspect = width/height;
+      canvas.width = 1000; canvas.height = 1000; ctx.clearRect(0, 0, 1000, 1000); ctx.save();
+      if (frameType === 'circle') { ctx.beginPath(); ctx.arc(500, 500, 500, 0, Math.PI*2); ctx.clip(); }
+      const imgAspect = img.width/img.height;
       let dW, dH, dX, dY;
-      if (imgAspect > canvasAspect) { dH = height*zoom; dW = dH*imgAspect; } else { dW = width*zoom; dH = dW/imgAspect; }
-      dX = (width-dW)/2; dY = (height-dH)/2; ctx.drawImage(img, dX, dY, dW, dH); ctx.restore();
+      if (imgAspect > 1) { dH = 1000*zoom; dW = dH*imgAspect; } else { dW = 1000*zoom; dH = dW/imgAspect; }
+      dX = (1000-dW)/2; dY = (1000-dH)/2; ctx.drawImage(img, dX, dY, dW, dH); ctx.restore();
 
-      // Overlays
       if (overlay === 'verified') {
-        ctx.fillStyle = '#3A5F3D';
-        ctx.beginPath(); ctx.arc(width * 0.85, height * 0.85, 50, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = 'white'; ctx.font = '900 60px Inter'; ctx.textAlign = 'center';
-        ctx.fillText('✓', width * 0.85, height * 0.87);
-      } else if (overlay === 'glitch') {
-        ctx.fillStyle = 'rgba(193, 39, 45, 0.2)';
-        ctx.fillRect(0, height * 0.4, width, 10);
-        ctx.fillRect(0, height * 0.6, width, 4);
+        ctx.fillStyle = '#3A5F3D'; ctx.beginPath(); ctx.arc(850, 850, 50, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'white'; ctx.font = '900 60px Inter'; ctx.textAlign = 'center'; ctx.fillText('✓', 850, 870);
       } else if (overlay === 'survival') {
-        ctx.fillStyle = 'rgba(0,0,0,0.8)';
-        ctx.fillRect(0, height * 0.85, width, height * 0.15);
-        ctx.fillStyle = 'white'; ctx.font = '900 35px Inter'; ctx.textAlign = 'center';
-        ctx.fillText('WOJAK SURVIVOR', width / 2, height * 0.95);
+        ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(0, 850, 1000, 150);
+        ctx.fillStyle = 'white'; ctx.font = '900 35px Inter'; ctx.textAlign = 'center'; ctx.fillText('WOJAK SURVIVOR UNIT', 500, 950);
       }
-
       setIsDrawing(false);
     };
     img.src = pfpImage;
@@ -300,15 +224,13 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
         )}
 
         <div className="flex flex-row lg:flex-row gap-2 md:gap-12 items-start h-[70vh] sm:h-auto overflow-hidden sm:overflow-visible">
-          {/* Controls Column */}
           <div className="w-[45%] sm:w-[450px] bg-black/40 p-2 md:p-8 rounded-xl flex flex-col gap-3 md:gap-6 border border-white/5 h-full overflow-y-auto custom-scrollbar">
-            
             <div className="flex justify-between items-center px-1">
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 bg-rugged-green rounded-full animate-pulse"></div>
                 <label className="text-[7px] md:text-[10px] font-black text-rugged-green uppercase tracking-widest">Web Search Active</label>
               </div>
-              <label className="text-[7px] md:text-[10px] font-black text-rugged-gray uppercase">Nano Pro</label>
+              <label className="text-[7px] md:text-[10px] font-black text-rugged-gray uppercase">Forge Pro</label>
             </div>
 
             <div className="bg-[#111] p-2 md:p-4 border-2 border-dashed border-rugged-green/20 rounded-lg space-y-2 md:space-y-3">
@@ -322,9 +244,7 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
                   <option value="16:9">16:9</option>
                 </select>
                 <select value={imageSize} onChange={(e) => setImageSize(e.target.value)} className="w-full bg-black border border-white/10 text-[8px] md:text-[10px] text-white p-1 font-bold rounded">
-                  <option value="1K">1K</option>
-                  <option value="2K">2K</option>
-                  <option value="4K">4K</option>
+                  <option value="1K">1K</option><option value="2K">2K</option><option value="4K">4K</option>
                 </select>
               </div>
               <textarea value={forgePrompt} onChange={(e) => setForgePrompt(e.target.value)} placeholder="Traits (e.g., 'wearing a Solana hat')..." className="w-full bg-black border border-rugged-gray/20 p-1 text-white font-mono text-[9px] min-h-[40px] md:min-h-[60px] rounded outline-none focus:border-rugged-green" />
@@ -352,31 +272,22 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
               </div>
             </div>
 
-            <select value={overlay} onChange={(e) => setOverlay(e.target.value as any)} className="w-full bg-black border border-white/5 p-1.5 text-white text-[7px] font-black uppercase rounded outline-none">
-              <option value="none">No Overlay</option>
-              <option value="verified">Verified</option>
-              <option value="glitch">Glitch</option>
-              <option value="survival">Survivor</option>
-            </select>
-
             <div className="flex flex-col gap-1 mt-auto">
               <div className="flex gap-1">
                 <button onClick={() => { setPfpImage(FALLBACK_IMAGE); setHasImage(true); }} className="flex-1 py-1.5 border border-[#3A5F3D]/30 text-[7px] font-black uppercase text-white rounded">Reset</button>
                 <button onClick={() => fileInputRef.current?.click()} className="flex-1 py-1.5 border border-[#6E6E6E]/30 text-[7px] font-black uppercase text-[#6E6E6E] rounded">Upload</button>
               </div>
-              <button onClick={downloadPFP} className="w-full py-2 bg-black border border-white/10 text-white font-black uppercase text-[8px] rounded hover:bg-white hover:text-black transition-all">Download</button>
-              <button onClick={handleAddToGallery} className="w-full py-2 bg-white text-black font-black uppercase text-[8px] rounded hover:bg-rugged-gray transition-all">Add Archive</button>
+              <button onClick={() => canvasRef.current && window.open(canvasRef.current.toDataURL('image/png'))} className="w-full py-2 bg-black border border-white/10 text-white font-black uppercase text-[8px] rounded">Preview Large</button>
+              <button onClick={handleAddToGallery} className="w-full py-2 bg-white text-black font-black uppercase text-[8px] rounded">Add Archive</button>
               <input type="file" ref={fileInputRef} onChange={handleUpload} className="hidden" accept="image/*" />
             </div>
           </div>
 
-          {/* Preview Column */}
           <div className="w-[55%] flex-1 flex flex-col items-center h-full sm:h-auto">
             <div className="relative w-full aspect-square shadow-[0_20px_40px_rgba(0,0,0,0.8)] overflow-hidden bg-neutral-900 border-2 border-white/5 rounded-xl flex items-center justify-center sticky top-0">
               {(isDrawing || isRetrying || isEditing) && <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm"><div className="text-rugged-green font-black text-[8px] uppercase tracking-widest animate-pulse">{isEditing ? 'MORPHING...' : 'FORGING...'}</div></div>}
               <canvas ref={canvasRef} className="w-full h-full object-contain" />
             </div>
-            <p className="mt-2 text-[6px] md:text-[8px] text-[#6E6E6E] uppercase font-black tracking-widest text-center">Identity Snapshot 0{loadCountRef.current}</p>
           </div>
         </div>
       </div>

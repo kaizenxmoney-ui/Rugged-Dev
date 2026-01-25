@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { RevealText } from './RevealText';
 import { sounds } from '../utils/sounds';
-import { FALLBACK_IMAGE } from '../constants';
+import { OFFICIAL_STORY_IMAGE } from '../constants';
 
 interface AILabProps {
   baseImage: string;
@@ -43,16 +43,45 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
     }
   };
 
-  const getBase64FromUrl = async (url: string): Promise<string> => {
-    if (url.startsWith('data:')) return url.split(',')[1];
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => { resolve((reader.result as string).split(',')[1]); };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
+  const getProcessedImageData = async (url: string): Promise<{ data: string; mimeType: string } | null> => {
+    // Optimization: Skip fetching if it's the official story image to avoid CORS/Network issues.
+    // The model already has the character locked via text description.
+    if (url === OFFICIAL_STORY_IMAGE) return null;
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) return null;
+      const blob = await response.blob();
+      const mimeType = blob.type || 'image/png';
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(blob);
+      
+      return new Promise((resolve) => {
+        img.onload = () => {
+          URL.revokeObjectURL(objectUrl);
+          const MAX_DIM = 1024; 
+          let width = img.width;
+          let height = img.height;
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) { height = Math.round((height * MAX_DIM) / width); width = MAX_DIM; }
+            else { width = Math.round((width * MAX_DIM) / height); height = MAX_DIM; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return resolve(null);
+          ctx.drawImage(img, 0, 0, width, height);
+          const finalDataUrl = canvas.toDataURL(mimeType === 'image/jpeg' ? 'image/jpeg' : 'image/png', 0.85);
+          const [header, data] = finalDataUrl.split(',');
+          const finalMime = header.split(':')[1].split(';')[0];
+          resolve({ data, mimeType: finalMime });
+        };
+        img.onerror = () => resolve(null);
+        img.src = objectUrl;
+      });
+    } catch (e) {
+      return null;
+    }
   };
 
   const withRetry = async <T,>(fn: () => Promise<T>, maxRetries = 7): Promise<T> => {
@@ -65,18 +94,15 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
         lastError = err;
         const msg = (err?.message || String(err)).toLowerCase();
         if (msg.includes("requested entity was not found")) {
-          setApiError("Authorization Key Expired or Invalid. Re-select your paid API key.");
+          setApiError("Authorization Key Expired. Re-select your paid API key.");
           throw err;
         }
         if ((err?.status === 503 || err?.status === 429 || msg.includes("overloaded") || msg.includes("rate limit")) && i < maxRetries - 1) {
-          const delay = Math.pow(2.2, i) * 2000;
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2.2, i) * 2000));
           continue;
         }
         throw err;
-      } finally {
-        setIsRetrying(false);
-      }
+      } finally { setIsRetrying(false); }
     }
     throw lastError;
   };
@@ -94,22 +120,17 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
         const model = thinkingMode ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const config: any = {
-          systemInstruction: "You are the RuggedDev Intelligence Hub. You analyze market structures and survivor narratives with absolute transparency. Use Google Search to verify current crypto trends.",
+          systemInstruction: "You are the RuggedDev Intelligence Hub. You analyze crypto trends with absolute transparency. Use Google Search to verify live data.",
         };
         if (searchGrounding) config.tools = [{ googleSearch: {} }];
-        if (thinkingMode) {
-          config.thinkingConfig = { thinkingBudget: 32768 };
-        }
+        if (thinkingMode) config.thinkingConfig = { thinkingBudget: 32768 };
         return await ai.models.generateContent({ model, contents: userMsg, config }) as GenerateContentResponse;
       });
       const text = response.text || "SIGNAL_LOST: Protocol interrupted...";
       setChatHistory(prev => [...prev, { role: 'bot', text, sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks || [] }]);
       sounds.playNeutralBlip();
-    } catch (err: any) {
-      setApiError(err.message || "Trench connection error.");
-    } finally {
-      setIsTyping(false);
-    }
+    } catch (err: any) { setApiError(err.message || "Trench connection error."); } 
+    finally { setIsTyping(false); }
   };
 
   const generateImage = async () => {
@@ -121,60 +142,49 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const model = 'gemini-3-pro-image-preview';
-        
-        const baseImageBase64 = await getBase64FromUrl(baseImage);
+        const baseImgInfo = await getProcessedImageData(baseImage);
 
+        // Character Identity Prompt (Always enforced even without uploaded image)
         const identityPrompt = `
-          INSTRUCTION: Use Google Search to accurately include real-world crypto logos, brands, or tech assets if requested. 
-          REFERENCE IMAGE PROVIDED: Use the provided character as the visual base for consistency.
-          
-          CHARACTER: A RuggedDev Wojak survivor. 
-          STYLE: Crude, hand-drawn, thick wobbly outlines, internet meme aesthetic. 
-          COLOR: Muted tones, flat coloring.
-          SCENE REQUEST: ${genPrompt}.
-          
-          MANDATORY: Subtly hide the ticker "$RDEV" somewhere in the background art.
+          INSTRUCTION: Use Google Search to include accurate logos or brands mentioned. 
+          CORE CHARACTER: The RuggedDev Wojak survivor. 
+          VISUALS: Pale off-white Wojak face, extremely tired droopy eyes with dark circles.
+          OUTFIT: Olive military helmet with crude hand-written 'SURVIVOR' text. 
+          STYLE: Extremely simple, crude, hand-drawn internet meme aesthetic. Thick, wobbly, inconsistent black outlines. Flat colors, no shading or lighting.
+          SCENE: ${genPrompt}.
+          MANDATORY: Maintain this shaky, wobbly, hand-drawn meme look for everything. Hide ticker '$RDEV' in the scene.
         `.trim();
         
         const config: any = { 
-          imageConfig: { 
-            aspectRatio: aspectRatio as any,
-            imageSize: imageSize as any
-          },
-          tools: [{ googleSearch: {} }]
+          imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any },
+          tools: [{ google_search: {} }] 
         };
 
-        const contents = {
-          parts: [
-            { inlineData: { data: baseImageBase64, mimeType: 'image/png' } },
-            { text: identityPrompt }
-          ]
-        };
+        const parts: any[] = [];
+        if (baseImgInfo) {
+           parts.push({ inlineData: { data: baseImgInfo.data, mimeType: baseImgInfo.mimeType } });
+           parts.push({ text: `REFERENCE ATTACHED: Use this custom base but keep the RuggedDev traits: ${identityPrompt}` });
+        } else {
+           parts.push({ text: `DEFAULT IDENTITY ACTIVE: Generate the RuggedDev survivor in this scene: ${identityPrompt}` });
+        }
 
-        return await ai.models.generateContent({ model, contents, config }) as GenerateContentResponse;
+        return await ai.models.generateContent({ model, contents: { parts }, config }) as GenerateContentResponse;
       });
       
-      if (!response.candidates?.[0]) throw new Error("Forge Response Blocked by Safety.");
-      
       let foundImageUrl: string | null = null;
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          foundImageUrl = `data:image/png;base64,${part.inlineData.data}`;
-          break;
+      if (response.candidates?.[0]) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData) {
+            foundImageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+            break;
+          }
         }
       }
 
-      if (foundImageUrl) {
-        setGeneratedImg(foundImageUrl);
-        sounds.playNeutralBlip();
-      } else {
-        throw new Error("No visual data forged.");
-      }
-    } catch (err: any) {
-      setApiError(err.message || "Forge Timeout. Signal lost.");
-    } finally {
-      setIsGenerating(false);
-    }
+      if (foundImageUrl) { setGeneratedImg(foundImageUrl); sounds.playNeutralBlip(); }
+      else { throw new Error("Forge response blocked or empty."); }
+    } catch (err: any) { setApiError(err.message || "Forge Timeout. System overloaded."); }
+    finally { setIsGenerating(false); }
   };
 
   const morphForgeImage = async () => {
@@ -183,58 +193,36 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
     setApiError(null);
     sounds.playCommandClick();
     try {
-      const base64Data = await getBase64FromUrl(generatedImg);
-      const mimeType = generatedImg.startsWith('data:') ? generatedImg.split(';')[0].split(':')[1] : 'image/png';
-      
+      const imgInfo = await getProcessedImageData(generatedImg);
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const characterGuidance = `
-          Maintain the character identity in this image. 
-          Modify only based on this request: ${forgeEditPrompt}. 
-          Keep the crude meme hand-drawn style with thick outlines.
-        `.trim();
-
         return await ai.models.generateContent({
           model: 'gemini-2.5-flash-image',
           contents: {
             parts: [
-              { inlineData: { data: base64Data, mimeType: mimeType } },
-              { text: characterGuidance }
+              { inlineData: { data: imgInfo?.data || '', mimeType: imgInfo?.mimeType || 'image/png' } },
+              { text: `Maintain the character identity but apply this change: ${forgeEditPrompt}. Keep crude meme style with thick outlines.` }
             ]
           }
         }) as GenerateContentResponse;
       });
 
       let foundImageUrl: string | null = null;
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          foundImageUrl = `data:image/png;base64,${part.inlineData.data}`;
-          break;
+      if (response.candidates?.[0]) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData) {
+            foundImageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+            break;
+          }
         }
       }
-
-      if (foundImageUrl) { 
-        setGeneratedImg(foundImageUrl); 
-        sounds.playNeutralBlip();
-      }
-    } catch (err: any) { 
-      setApiError(err.message || "Forge Morph Failed."); 
-    } finally { 
-      setIsMorphing(false); 
-      setForgeEditPrompt(''); 
-    }
+      if (foundImageUrl) { setGeneratedImg(foundImageUrl); sounds.playNeutralBlip(); }
+    } catch (err: any) { setApiError(err.message || "Forge Morph Failed."); } 
+    finally { setIsMorphing(false); setForgeEditPrompt(''); }
   };
 
   const handleAddToGallery = () => { if (generatedImg && onImageGenerated) { onImageGenerated(generatedImg); sounds.playCommandClick(); } };
-
-  const handleDownloadForge = () => {
-    if (!generatedImg) return;
-    sounds.playCommandClick();
-    const link = document.createElement('a');
-    link.download = `ruggeddev-forge-${Date.now()}.png`;
-    link.href = generatedImg;
-    link.click();
-  };
+  const handleDownloadForge = () => { if (!generatedImg) return; sounds.playCommandClick(); const link = document.createElement('a'); link.download = `ruggeddev-forge-${Date.now()}.png`; link.href = generatedImg; link.click(); };
 
   return (
     <section id="chat-terminal" className="py-12 sm:py-24 bg-[#111111] border-y-2 border-[#6E6E6E]/20 relative">
@@ -245,13 +233,13 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
         <div className="text-center mb-10 sm:mb-16">
           <RevealText>
             <h2 className="text-3xl sm:text-6xl font-black mb-3 tracking-tighter uppercase italic">Propaganda Terminal</h2>
-            <p className="text-[#3A5F3D] font-black text-[10px] sm:text-sm tracking-[0.2em] sm:tracking-[0.4em] uppercase">Intelligence & Visual Generation Hub</p>
+            <p className="text-[#3A5F3D] font-black text-[10px] sm:text-sm tracking-[0.2em] sm:tracking-[0.4em] uppercase">Intelligence & Trench Forge Pro Hub</p>
           </RevealText>
         </div>
 
         {apiError && (
           <div className="max-w-4xl mx-auto mb-8 sm:mb-12 p-4 sm:p-6 border-2 sm:border-4 border-rugged-red bg-rugged-red/10 text-white flex flex-col items-center gap-4 rounded-xl">
-            <p className="font-black uppercase text-xs sm:text-sm italic">SYSTEM_ERROR: {apiError}</p>
+            <p className="font-black uppercase text-xs sm:text-sm italic text-center">SYSTEM_ERROR: {apiError}</p>
             <button onClick={handleOpenKey} className="px-5 py-2 sm:px-6 sm:py-2 bg-rugged-red text-white font-black text-[10px] sm:text-xs uppercase rounded-lg hover:brightness-110">Re-select Key</button>
           </div>
         )}
@@ -302,14 +290,14 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
           <div className="flex flex-col gap-8">
             <div className="border-2 sm:border-4 border-white/5 bg-black p-4 sm:p-10 rounded-2xl sm:rounded-[2rem] shadow-2xl relative">
               <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
-                <h3 className="text-lg sm:text-xl font-black text-rugged-red uppercase italic tracking-widest">Visual Forge (Pro)</h3>
+                <h3 className="text-lg sm:text-xl font-black text-rugged-red uppercase italic tracking-widest">Trench Forge Pro</h3>
                 <span className="bg-rugged-red text-white text-[8px] font-black px-2 py-0.5 rounded uppercase">Search Enabled</span>
               </div>
               
               <textarea 
                 value={genPrompt} 
                 onChange={(e) => setGenPrompt(e.target.value)} 
-                placeholder="Describe a new scene for the RuggedDev survivor. Use real-world brands (e.g. 'holding a Phantom wallet') for grounded accuracy..." 
+                placeholder="Describe a new scene for the RuggedDev survivor. Use real-world brands (e.g. 'holding a Phantom wallet') for grounded accuracy. Powered by the Trench Engine..." 
                 className="w-full bg-[#111] border border-white/10 p-4 text-white min-h-[100px] rounded-xl mb-6 focus:border-rugged-red outline-none text-sm font-mono" 
               />
               
@@ -325,7 +313,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-white/40 uppercase tracking-widest ml-1">Resolution (Pro)</label>
+                  <label className="text-[9px] font-black text-white/40 uppercase tracking-widest ml-1">Resolution (Pro Forge)</label>
                   <div className="flex bg-[#111] border border-white/10 rounded-xl overflow-hidden">
                     {(['1K', '2K', '4K'] as const).map(size => (
                       <button
@@ -342,7 +330,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
 
               <div className="flex flex-col gap-4">
                 <button onClick={generateImage} disabled={isGenerating || !genPrompt.trim()} className="w-full bg-rugged-red py-4 sm:py-6 font-black text-white text-lg sm:text-xl rounded-xl active:scale-95 uppercase tracking-widest shadow-[0_10px_30px_rgba(193,39,45,0.3)]">
-                  {isGenerating ? 'SUMMONING...' : 'FORGE IDENTITY'}
+                  {isGenerating ? 'FORGING...' : 'INITIATE TRENCH FORGE'}
                 </button>
 
                 {generatedImg && (
@@ -374,7 +362,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                 {(isGenerating || isMorphing) ? (
                   <div className="flex flex-col items-center">
                     <div className="w-10 h-10 border-4 border-rugged-red border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <span className="font-black uppercase text-[10px] tracking-widest animate-pulse">Syncing Visual Engine...</span>
+                    <span className="font-black uppercase text-[10px] tracking-widest animate-pulse text-rugged-red">Syncing Trench Engine...</span>
                   </div>
                 ) : generatedImg ? (
                   <div className="relative w-full h-full group">
@@ -388,7 +376,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                 ) : (
                   <div className="text-center p-8 opacity-40">
                     <p className="uppercase text-[#3A5F3D] text-[12px] font-black tracking-widest leading-loose">Forge Grounded Propaganda</p>
-                    <p className="text-[8px] font-bold uppercase tracking-widest mt-2 text-[#6E6E6E]">Using Gemini 3 Pro with Google Search Guidance</p>
+                    <p className="text-[8px] font-bold uppercase tracking-widest mt-2 text-[#6E6E6E]">Using Trench Forge Pro with Google Search Guidance</p>
                   </div>
                 )}
               </div>
