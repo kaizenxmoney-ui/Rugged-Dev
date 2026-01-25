@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { RevealText } from './RevealText';
 import { sounds } from '../utils/sounds';
@@ -18,7 +18,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
   const [genPrompt, setGenPrompt] = useState('');
   const [forgeEditPrompt, setForgeEditPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState('1:1');
-  const [imageSize, setImageSize] = useState('1K');
+  const [imageSize, setImageSize] = useState<'1K' | '2K' | '4K'>('1K');
   const [generatedImg, setGeneratedImg] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isMorphing, setIsMorphing] = useState(false);
@@ -94,7 +94,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
         const model = thinkingMode ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const config: any = {
-          systemInstruction: "You are the RuggedDev, the analytical origin of the Survivor movement. You speak with a calm, grounded, and honest tone. You value incentive physics and organic coordination over hype. Be skeptical but transparent about survival architecture. Use Google Search to provide accurate, up-to-date data on crypto trends, market statistics, and technical protocols.",
+          systemInstruction: "You are the RuggedDev Intelligence Hub. You analyze market structures and survivor narratives with absolute transparency. Use Google Search to verify current crypto trends.",
         };
         if (searchGrounding) config.tools = [{ googleSearch: {} }];
         if (thinkingMode) {
@@ -122,22 +122,18 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const model = 'gemini-3-pro-image-preview';
         
+        const baseImageBase64 = await getBase64FromUrl(baseImage);
+
         const identityPrompt = `
-          INSTRUCTION: Use Google Search to accurately reference and include real-world crypto logos, software interfaces (like Phantom, Metamask), or hardware assets (like Ledger, Trezor) if requested. Maintain the character identity below while using search data for accuracy.
-
-          MANDATORY WATERMARK: You MUST include the text "$RDEV" in a tiny, subtle, hand-drawn font somewhere randomly within the image (e.g., as graffiti on a wall, a tag on a helmet, or hidden in the background).
-
-          CHARACTER IDENTITY:
-          RuggedDev Wojak survivor characters. 
-          Variations: Male or female survivors. 
-          Appearance: Pale off-white Wojak faces, tired red-rimmed eyes, dark under-eye circles, flat neutral mouths. 
-          Art Style: Crude, hand-drawn internet meme style. Thick wobbly black outlines. Shaky lines.
-          Coloring: Flat, muted tones (olive green, dull brown, warm white). No gradients.
-          Clothing: Military worn gear and helmets. Every helmet MUST have rough hand-drawn text: "SURVIVOR".
+          INSTRUCTION: Use Google Search to accurately include real-world crypto logos, brands, or tech assets if requested. 
+          REFERENCE IMAGE PROVIDED: Use the provided character as the visual base for consistency.
           
-          INTEGRATION: If a specific crypto brand or logo is requested, render it in this same crude, hand-drawn, wobbly style to fit the character's environment.
+          CHARACTER: A RuggedDev Wojak survivor. 
+          STYLE: Crude, hand-drawn, thick wobbly outlines, internet meme aesthetic. 
+          COLOR: Muted tones, flat coloring.
+          SCENE REQUEST: ${genPrompt}.
           
-          PROMPT: ${genPrompt}. 
+          MANDATORY: Subtly hide the ticker "$RDEV" somewhere in the background art.
         `.trim();
         
         const config: any = { 
@@ -148,14 +144,17 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
           tools: [{ googleSearch: {} }]
         };
 
-        return await ai.models.generateContent({ 
-          model, 
-          contents: { parts: [{ text: identityPrompt }] }, 
-          config 
-        }) as GenerateContentResponse;
+        const contents = {
+          parts: [
+            { inlineData: { data: baseImageBase64, mimeType: 'image/png' } },
+            { text: identityPrompt }
+          ]
+        };
+
+        return await ai.models.generateContent({ model, contents, config }) as GenerateContentResponse;
       });
       
-      if (!response.candidates?.[0]) throw new Error("Forge Response Blocked: Safety filters triggered.");
+      if (!response.candidates?.[0]) throw new Error("Forge Response Blocked by Safety.");
       
       let foundImageUrl: string | null = null;
       for (const part of response.candidates[0].content.parts) {
@@ -169,10 +168,10 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
         setGeneratedImg(foundImageUrl);
         sounds.playNeutralBlip();
       } else {
-        throw new Error("Forge Failure: No visual data returned.");
+        throw new Error("No visual data forged.");
       }
     } catch (err: any) {
-      setApiError(err.message || "Forge Timeout. Signal lost in warzone.");
+      setApiError(err.message || "Forge Timeout. Signal lost.");
     } finally {
       setIsGenerating(false);
     }
@@ -190,10 +189,9 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const characterGuidance = `
-          ACT AS: A professional trench-survivor artist. 
-          IDENTITY LOCK: Maintain the exact same RuggedDev Wojak character from the input image. Keep the pale face, tired eyes, and hand-drawn wobbly style.
-          REQUEST: ${forgeEditPrompt}. 
-          MODIFICATION RULE: Only change what is requested (e.g., adding an item, changing background, adding a filter). DO NOT change the core Wojak identity.
+          Maintain the character identity in this image. 
+          Modify only based on this request: ${forgeEditPrompt}. 
+          Keep the crude meme hand-drawn style with thick outlines.
         `.trim();
 
         return await ai.models.generateContent({
@@ -228,7 +226,15 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
   };
 
   const handleAddToGallery = () => { if (generatedImg && onImageGenerated) { onImageGenerated(generatedImg); sounds.playCommandClick(); } };
-  const downloadRaw = () => { if (!generatedImg) return; sounds.playCommandClick(); const link = document.createElement('a'); link.download = `rugged-forge-${Date.now()}.png`; link.href = generatedImg; link.click(); };
+
+  const handleDownloadForge = () => {
+    if (!generatedImg) return;
+    sounds.playCommandClick();
+    const link = document.createElement('a');
+    link.download = `ruggeddev-forge-${Date.now()}.png`;
+    link.href = generatedImg;
+    link.click();
+  };
 
   return (
     <section id="chat-terminal" className="py-12 sm:py-24 bg-[#111111] border-y-2 border-[#6E6E6E]/20 relative">
@@ -238,17 +244,14 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
       <div className="container mx-auto px-4">
         <div className="text-center mb-10 sm:mb-16">
           <RevealText>
-            <h2 className="text-3xl sm:text-6xl font-black mb-3 tracking-tighter uppercase italic">Intelligence Lab</h2>
-            <p className="text-[#3A5F3D] font-black text-[10px] sm:text-sm tracking-[0.2em] sm:tracking-[0.4em] uppercase">Architecture Analysis Terminal</p>
+            <h2 className="text-3xl sm:text-6xl font-black mb-3 tracking-tighter uppercase italic">Propaganda Terminal</h2>
+            <p className="text-[#3A5F3D] font-black text-[10px] sm:text-sm tracking-[0.2em] sm:tracking-[0.4em] uppercase">Intelligence & Visual Generation Hub</p>
           </RevealText>
         </div>
 
         {apiError && (
           <div className="max-w-4xl mx-auto mb-8 sm:mb-12 p-4 sm:p-6 border-2 sm:border-4 border-rugged-red bg-rugged-red/10 text-white flex flex-col items-center gap-4 rounded-xl">
-            <div className="text-center">
-              <p className="font-black uppercase text-xs sm:text-sm italic">SYSTEM_ERROR: {apiError}</p>
-              <p className="text-[8px] sm:text-[10px] opacity-60 uppercase tracking-widest mt-1">Select a valid paid API key for system access.</p>
-            </div>
+            <p className="font-black uppercase text-xs sm:text-sm italic">SYSTEM_ERROR: {apiError}</p>
             <button onClick={handleOpenKey} className="px-5 py-2 sm:px-6 sm:py-2 bg-rugged-red text-white font-black text-[10px] sm:text-xs uppercase rounded-lg hover:brightness-110">Re-select Key</button>
           </div>
         )}
@@ -257,21 +260,16 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
           {/* Protocol Terminal */}
           <div className="border-2 sm:border-4 border-white/5 bg-black p-4 sm:p-10 flex flex-col h-[500px] sm:h-[850px] rounded-2xl sm:rounded-[2rem] shadow-2xl relative">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 border-b border-white/10 pb-4">
-              <h3 className="text-lg sm:text-xl font-black text-rugged-green uppercase italic tracking-widest">Dev's Terminal</h3>
+              <h3 className="text-lg sm:text-xl font-black text-rugged-green uppercase italic tracking-widest">Protocol Intelligence</h3>
               <div className="flex gap-2">
-                <button 
-                  onClick={() => { setThinkingMode(!thinkingMode); sounds.playRelayClick(); }} 
-                  className={`flex-1 sm:flex-none text-[8px] sm:text-[9px] font-bold px-3 py-1.5 rounded-full border transition-all ${thinkingMode ? 'bg-rugged-red border-rugged-red text-white' : 'border-white/20 text-white/40'}`}
-                >
-                  {thinkingMode ? 'DEEP_REASONING' : 'FAST_PROTOCOL'}
-                </button>
+                <button onClick={() => { setThinkingMode(!thinkingMode); sounds.playRelayClick(); }} className={`flex-1 sm:flex-none text-[8px] sm:text-[9px] font-bold px-3 py-1.5 rounded-full border transition-all ${thinkingMode ? 'bg-rugged-red border-rugged-red text-white' : 'border-white/20 text-white/40'}`}>{thinkingMode ? 'DEEP_THINK' : 'FAST_LINK'}</button>
                 <button onClick={() => { setSearchGrounding(!searchGrounding); sounds.playRelayClick(); }} className={`flex-1 sm:flex-none text-[8px] sm:text-[9px] font-bold px-3 py-1.5 rounded-full border transition-all ${searchGrounding ? 'bg-rugged-green border-rugged-green text-white' : 'border-white/20 text-white/40'}`}>GROUNDING</button>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto mb-4 sm:mb-8 space-y-4 pr-2 custom-scrollbar font-mono text-xs sm:text-sm">
               {chatHistory.length === 0 && (
                 <div className="h-full flex items-center justify-center text-white/10 font-black text-center px-4 uppercase tracking-widest leading-loose">
-                  ask dev a question
+                  Query the Survivor Intelligence Protocol...
                 </div>
               )}
               {chatHistory.map((msg, i) => (
@@ -283,7 +281,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                         <span className="text-[8px] font-black text-rugged-green uppercase tracking-widest">Intel Sources:</span>
                         {msg.sources.map((s, idx) => (
                           <a key={idx} href={s.web?.uri} target="_blank" rel="noopener noreferrer" className="block text-[10px] text-white/60 hover:text-rugged-green transition-colors truncate flex items-center gap-2">
-                            <span className="text-rugged-green">[0{idx + 1}]</span>
+                            <span className="text-rugged-green">[{idx + 1}]</span>
                             {s.web?.title}
                           </a>
                         ))}
@@ -292,7 +290,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                   </div>
                 </div>
               ))}
-              {isTyping && <div className="text-rugged-green font-black text-[10px] animate-pulse tracking-widest uppercase">{thinkingMode ? 'Analyzing Grounded Context...' : 'Transmitting Signal...'}</div>}
+              {isTyping && <div className="text-rugged-green font-black text-[10px] animate-pulse tracking-widest uppercase">Transmitting...</div>}
             </div>
             <div className="flex gap-2">
               <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && runChat()} placeholder="XMIT COMMAND..." className="flex-1 bg-[#111] border border-white/10 p-4 text-white rounded-xl focus:border-rugged-green outline-none text-sm font-mono" />
@@ -304,56 +302,65 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
           <div className="flex flex-col gap-8">
             <div className="border-2 sm:border-4 border-white/5 bg-black p-4 sm:p-10 rounded-2xl sm:rounded-[2rem] shadow-2xl relative">
               <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
-                <h3 className="text-lg sm:text-xl font-black text-rugged-red uppercase italic tracking-widest">Visual_Forge (Nano Pro)</h3>
-                <div className="flex items-center gap-2">
-                   <div className="w-1.5 h-1.5 bg-rugged-green rounded-full animate-pulse"></div>
-                   <span className="text-[8px] font-black text-rugged-green uppercase tracking-widest">Web Search Active</span>
-                </div>
+                <h3 className="text-lg sm:text-xl font-black text-rugged-red uppercase italic tracking-widest">Visual Forge (Pro)</h3>
+                <span className="bg-rugged-red text-white text-[8px] font-black px-2 py-0.5 rounded uppercase">Search Enabled</span>
               </div>
-              <textarea value={genPrompt} onChange={(e) => setGenPrompt(e.target.value)} placeholder="Describe a survivor scene. Include real crypto brands (Phantom, Solana, etc.) for high-accuracy rendering..." className="w-full bg-[#111] border border-white/10 p-4 text-white min-h-[100px] rounded-xl mb-6 focus:border-rugged-red outline-none text-sm font-mono" />
+              
+              <textarea 
+                value={genPrompt} 
+                onChange={(e) => setGenPrompt(e.target.value)} 
+                placeholder="Describe a new scene for the RuggedDev survivor. Use real-world brands (e.g. 'holding a Phantom wallet') for grounded accuracy..." 
+                className="w-full bg-[#111] border border-white/10 p-4 text-white min-h-[100px] rounded-xl mb-6 focus:border-rugged-red outline-none text-sm font-mono" 
+              />
               
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-white/40 uppercase tracking-widest ml-1">Aspect Ratio</label>
                   <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} className="w-full bg-[#111] border border-white/10 text-white p-3 text-[10px] sm:text-xs font-bold rounded-xl outline-none">
-                    <option value="1:1">1:1</option>
-                    <option value="3:4">3:4</option>
-                    <option value="4:3">4:3</option>
-                    <option value="9:16">9:16</option>
-                    <option value="16:9">16:9</option>
+                    <option value="1:1">1:1 Square</option>
+                    <option value="3:4">3:4 Portrait</option>
+                    <option value="4:3">4:3 Landscape</option>
+                    <option value="9:16">9:16 Story</option>
+                    <option value="16:9">16:9 Cinema</option>
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-white/40 uppercase tracking-widest ml-1">Resolution</label>
-                  <select value={imageSize} onChange={(e) => setImageSize(e.target.value)} className="w-full bg-[#111] border border-white/10 text-white p-3 text-[10px] sm:text-xs font-bold rounded-xl outline-none">
-                    <option value="1K">1K</option>
-                    <option value="2K">2K</option>
-                    <option value="4K">4K</option>
-                  </select>
+                  <label className="text-[9px] font-black text-white/40 uppercase tracking-widest ml-1">Resolution (Pro)</label>
+                  <div className="flex bg-[#111] border border-white/10 rounded-xl overflow-hidden">
+                    {(['1K', '2K', '4K'] as const).map(size => (
+                      <button
+                        key={size}
+                        onClick={() => setImageSize(size)}
+                        className={`flex-1 py-3 text-[10px] font-black transition-all ${imageSize === size ? 'bg-rugged-red text-white' : 'text-white/40 hover:text-white'}`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
               <div className="flex flex-col gap-4">
-                <button onClick={generateImage} disabled={isGenerating || isMorphing || !genPrompt.trim()} className="w-full bg-rugged-red py-4 sm:py-6 font-black text-white text-lg sm:text-xl rounded-xl active:scale-95 uppercase tracking-widest shadow-[0_10px_30px_rgba(193,39,45,0.3)]">
-                  {isGenerating ? 'SUMMONING...' : 'SUMMON VISUAL'}
+                <button onClick={generateImage} disabled={isGenerating || !genPrompt.trim()} className="w-full bg-rugged-red py-4 sm:py-6 font-black text-white text-lg sm:text-xl rounded-xl active:scale-95 uppercase tracking-widest shadow-[0_10px_30px_rgba(193,39,45,0.3)]">
+                  {isGenerating ? 'SUMMONING...' : 'FORGE IDENTITY'}
                 </button>
 
                 {generatedImg && (
                   <div className="p-4 bg-white/5 border border-rugged-green/20 rounded-xl space-y-3 animate-reveal">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-rugged-green rounded-full"></div>
-                      <span className="text-[10px] font-black text-rugged-green uppercase tracking-widest">Morph Identity (2.5 Flash)</span>
+                      <span className="text-[10px] font-black text-rugged-green uppercase tracking-widest">Morph Protocol (v2.5)</span>
                     </div>
                     <div className="flex gap-2">
                       <input 
                         value={forgeEditPrompt} 
                         onChange={(e) => setForgeEditPrompt(e.target.value)} 
-                        placeholder="Add a mask, change hat, background..." 
+                        placeholder="Apply changes (e.g. 'add a mask')..." 
                         className="flex-1 bg-black border border-white/10 p-3 text-white rounded-lg focus:border-rugged-green outline-none text-[11px] font-mono"
                       />
                       <button 
                         onClick={morphForgeImage} 
-                        disabled={isGenerating || isMorphing || !forgeEditPrompt.trim()} 
+                        disabled={isMorphing || !forgeEditPrompt.trim()} 
                         className="bg-rugged-green px-6 font-black text-white uppercase rounded-lg active:scale-95 text-[11px]"
                       >
                         {isMorphing ? '...' : 'MORPH'}
@@ -367,23 +374,21 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                 {(isGenerating || isMorphing) ? (
                   <div className="flex flex-col items-center">
                     <div className="w-10 h-10 border-4 border-rugged-red border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <span className="font-black uppercase text-[10px] tracking-widest animate-pulse">
-                      {isGenerating ? 'Syncing Visual Engine (Search Enabled)' : 'Recalibrating Identity...'}
-                    </span>
+                    <span className="font-black uppercase text-[10px] tracking-widest animate-pulse">Syncing Visual Engine...</span>
                   </div>
                 ) : generatedImg ? (
                   <div className="relative w-full h-full group">
-                    <img src={generatedImg} className="w-full h-full object-contain" alt="Survivor Visual" />
-                    <div className="absolute bottom-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                       <button onClick={downloadRaw} className="bg-black/80 backdrop-blur-md text-white border border-white/20 font-black px-4 py-2 uppercase text-[9px] rounded-lg">DL RAW</button>
-                       <button onClick={() => onForgeToMeme(generatedImg)} className="bg-rugged-green text-white font-black px-4 py-2 uppercase text-[9px] rounded-lg">MORPH LAB</button>
-                       <button onClick={handleAddToGallery} className="bg-white text-black font-black px-4 py-2 uppercase text-[9px] rounded-lg">ARCHIVE</button>
+                    <img src={generatedImg} className="w-full h-full object-contain" alt="Forged Identity" />
+                    <div className="absolute bottom-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                       <button onClick={() => onForgeToMeme(generatedImg)} className="bg-rugged-green text-white font-black px-4 py-2 uppercase text-[9px] rounded-lg shadow-xl hover:brightness-110 active:scale-95 transition-all">USE AS BASE</button>
+                       <button onClick={handleDownloadForge} className="bg-rugged-red text-white font-black px-4 py-2 uppercase text-[9px] rounded-lg shadow-xl hover:brightness-110 active:scale-95 transition-all">DOWNLOAD</button>
+                       <button onClick={handleAddToGallery} className="bg-white text-black font-black px-4 py-2 uppercase text-[9px] rounded-lg shadow-xl hover:brightness-110 active:scale-95 transition-all">ARCHIVE</button>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center p-8 opacity-40 group cursor-pointer" onClick={() => !isGenerating && generateImage()}>
-                    <p className="uppercase text-[#3A5F3D] text-[12px] font-black tracking-widest leading-loose">Forge Grounded Character</p>
-                    <p className="text-[8px] font-bold uppercase tracking-widest mt-2 text-[#6E6E6E]">Google Search data will be used for accuracy</p>
+                  <div className="text-center p-8 opacity-40">
+                    <p className="uppercase text-[#3A5F3D] text-[12px] font-black tracking-widest leading-loose">Forge Grounded Propaganda</p>
+                    <p className="text-[8px] font-bold uppercase tracking-widest mt-2 text-[#6E6E6E]">Using Gemini 3 Pro with Google Search Guidance</p>
                   </div>
                 )}
               </div>

@@ -8,8 +8,9 @@ export const COLORS = {
 };
 
 /**
- * The permanent official mascot image for the story section. 
- * This URL is hardcoded to ensure it persists across refreshes.
+ * The absolute permanent official mascot image for the story section. 
+ * This is the Wojak Survivor ($RDEV) provided by the user.
+ * Hardcoded to the raw GitHub link to ensure it never "removes" itself.
  */
 export const OFFICIAL_STORY_IMAGE = "https://raw.githubusercontent.com/kaizenxmoney-ui/Rugged-Dev/main/ruggeddev.png";
 
@@ -19,9 +20,9 @@ export const OFFICIAL_STORY_IMAGE = "https://raw.githubusercontent.com/kaizenxmo
 export const FALLBACK_IMAGE = OFFICIAL_STORY_IMAGE; 
 
 export const STORAGE_KEYS = {
-  CUSTOM_CHARACTER: 'rugged_dev_custom_char',
-  CHARACTER_LOCKED: 'rugged_dev_char_locked',
-  GALLERY: 'rugged_dev_gallery_archive'
+  CUSTOM_CHARACTER: 'rugged_dev_custom_char_v3',
+  CHARACTER_LOCKED: 'rugged_dev_char_locked_v3',
+  GALLERY: 'rugged_dev_gallery_archive_v3'
 };
 
 export const TOKEN_INFO = {
