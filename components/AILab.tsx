@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { RevealText } from './RevealText';
@@ -44,10 +43,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
   };
 
   const getProcessedImageData = async (url: string): Promise<{ data: string; mimeType: string } | null> => {
-    // Optimization: Skip fetching if it's the official story image to avoid CORS/Network issues.
-    // The model already has the character locked via text description.
     if (url === OFFICIAL_STORY_IMAGE) return null;
-
     try {
       const response = await fetch(url);
       if (!response.ok) return null;
@@ -94,7 +90,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
         lastError = err;
         const msg = (err?.message || String(err)).toLowerCase();
         if (msg.includes("requested entity was not found")) {
-          setApiError("Authorization Key Expired. Re-select your paid API key.");
+          setApiError("Intel Key Invalid. Re-select your paid API key.");
           throw err;
         }
         if ((err?.status === 503 || err?.status === 429 || msg.includes("overloaded") || msg.includes("rate limit")) && i < maxRetries - 1) {
@@ -120,7 +116,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
         const model = thinkingMode ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const config: any = {
-          systemInstruction: "You are the RuggedDev Intelligence Hub. You analyze crypto trends with absolute transparency. Use Google Search to verify live data.",
+          systemInstruction: "You are the RuggedDev Intelligence Hub. Analyze crypto trends and rug pulls. Use Google Search to provide up-to-date and accurate information to survivors in the trenches.",
         };
         if (searchGrounding) config.tools = [{ googleSearch: {} }];
         if (thinkingMode) config.thinkingConfig = { thinkingBudget: 32768 };
@@ -144,28 +140,32 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
         const model = 'gemini-3-pro-image-preview';
         const baseImgInfo = await getProcessedImageData(baseImage);
 
-        // Character Identity Prompt (Always enforced even without uploaded image)
+        // MUTED CINEMATIC MEME ILLUSTRATION PROMPT - UPDATED FOR SPECIFICITY
         const identityPrompt = `
-          INSTRUCTION: Use Google Search to include accurate logos or brands mentioned. 
-          CORE CHARACTER: The RuggedDev Wojak survivor. 
-          VISUALS: Pale off-white Wojak face, extremely tired droopy eyes with dark circles.
-          OUTFIT: Olive military helmet with crude hand-written 'SURVIVOR' text. 
-          STYLE: Extremely simple, crude, hand-drawn internet meme aesthetic. Thick, wobbly, inconsistent black outlines. Flat colors, no shading or lighting.
-          SCENE: ${genPrompt}.
-          MANDATORY: Maintain this shaky, wobbly, hand-drawn meme look for everything. Hide ticker '$RDEV' in the scene.
+          STYLE: Muted cinematic meme illustration. Soft, desaturated earthy colors and warm brown tones. Clearly illustrated, not realistic.
+          CHARACTER: Wojak-style characters with simple, flat meme faces, minimal facial features, tired eyes, and cartoon proportions. Faces remain iconic and clearly non-realistic.
+          LINEWORK: Hand-drawn and slightly imperfect, with soft edges and subtle inconsistencies. No clean vector lines. No sketchbook roughness. Controlled, human-looking illustration.
+          ANATOMY: Bodies are simplified and illustrated with believable proportions but low detail. No anatomical realism.
+          THEME: Crypto or rug-pull themed modern art. Symbolic elements like broken charts, ironic signs, abandoned environments, or subtle Web3 references. 
+          MOOD: The scene feels ironic, calm, and emotionally muted rather than dramatic. Soft warm lighting.
+          GEAR: Military survivor metaphor: simple olive helmet with hand-written, uneven text reading 'SURVIVOR'. Clothing is symbolic and illustrated, not realistic combat gear.
+          HIDDEN: A small '$RDEV' text is subtly hidden somewhere in the image like a scribble, graffiti, or signature. 
+          STRICTLY AVOID: photorealistic, realistic human face, oil painting, concept art, cinematic realism, dramatic lighting, ultra-detailed textures, painterly realism, glossy finish, 3D render, anime style, Pixar style, clean vector art, perfect linework, sharp outlines, sketchbook doodle, rough pencil drawing, realistic food, realistic clothing, realistic soldier gear.
+          GROUNDING: Use Google Search to find and incorporate brands or logos mentioned (e.g., Solana) but render them in this muted painterly style.
+          USER_REQUEST: ${genPrompt}.
         `.trim();
         
         const config: any = { 
           imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any },
-          tools: [{ google_search: {} }] 
+          tools: [{ googleSearch: {} }] 
         };
 
         const parts: any[] = [];
         if (baseImgInfo) {
            parts.push({ inlineData: { data: baseImgInfo.data, mimeType: baseImgInfo.mimeType } });
-           parts.push({ text: `REFERENCE ATTACHED: Use this custom base but keep the RuggedDev traits: ${identityPrompt}` });
+           parts.push({ text: `REFERENCE ATTACHED: Use this character but strictly follow the Muted Cinematic Meme Illustration style: ${identityPrompt}` });
         } else {
-           parts.push({ text: `DEFAULT IDENTITY ACTIVE: Generate the RuggedDev survivor in this scene: ${identityPrompt}` });
+           parts.push({ text: `INITIATE FORGE PROTOCOL (Muted Cinematic Meme Style): ${identityPrompt}` });
         }
 
         return await ai.models.generateContent({ model, contents: { parts }, config }) as GenerateContentResponse;
@@ -182,7 +182,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
       }
 
       if (foundImageUrl) { setGeneratedImg(foundImageUrl); sounds.playNeutralBlip(); }
-      else { throw new Error("Forge response blocked or empty."); }
+      else { throw new Error("Forge response blocked by safety or empty."); }
     } catch (err: any) { setApiError(err.message || "Forge Timeout. System overloaded."); }
     finally { setIsGenerating(false); }
   };
@@ -201,8 +201,11 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
           contents: {
             parts: [
               { inlineData: { data: imgInfo?.data || '', mimeType: imgInfo?.mimeType || 'image/png' } },
-              { text: `Maintain the character identity but apply this change: ${forgeEditPrompt}. Keep crude meme style with thick outlines.` }
+              { text: `Maintain the Muted Cinematic Meme Illustration style (soft earthy colors, flat Wojak faces, imperfect linework). Apply change: ${forgeEditPrompt}. STRICTLY AVOID photorealism or clean vector art.` }
             ]
+          },
+          config: {
+            tools: [{ googleSearch: {} }]
           }
         }) as GenerateContentResponse;
       });
@@ -257,7 +260,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
             <div className="flex-1 overflow-y-auto mb-4 sm:mb-8 space-y-4 pr-2 custom-scrollbar font-mono text-xs sm:text-sm">
               {chatHistory.length === 0 && (
                 <div className="h-full flex items-center justify-center text-white/10 font-black text-center px-4 uppercase tracking-widest leading-loose">
-                  Query the Survivor Intelligence Protocol...
+                  Query the Survivor Intelligence Protocol (gemini-3-flash-preview)...
                 </div>
               )}
               {chatHistory.map((msg, i) => (
@@ -266,7 +269,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                     <p className="whitespace-pre-wrap">{msg.text}</p>
                     {msg.sources && msg.sources.length > 0 && (
                       <div className="mt-4 pt-3 border-t border-white/10 space-y-2">
-                        <span className="text-[8px] font-black text-rugged-green uppercase tracking-widest">Intel Sources:</span>
+                        <span className="text-[8px] font-black text-rugged-green uppercase tracking-widest">Intel Sources (Grounding):</span>
                         {msg.sources.map((s, idx) => (
                           <a key={idx} href={s.web?.uri} target="_blank" rel="noopener noreferrer" className="block text-[10px] text-white/60 hover:text-rugged-green transition-colors truncate flex items-center gap-2">
                             <span className="text-rugged-green">[{idx + 1}]</span>
@@ -291,13 +294,13 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
             <div className="border-2 sm:border-4 border-white/5 bg-black p-4 sm:p-10 rounded-2xl sm:rounded-[2rem] shadow-2xl relative">
               <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
                 <h3 className="text-lg sm:text-xl font-black text-rugged-red uppercase italic tracking-widest">Trench Forge Pro</h3>
-                <span className="bg-rugged-red text-white text-[8px] font-black px-2 py-0.5 rounded uppercase">Search Enabled</span>
+                <span className="bg-rugged-red text-white text-[8px] font-black px-2 py-0.5 rounded uppercase">Web Search Ready</span>
               </div>
               
               <textarea 
                 value={genPrompt} 
                 onChange={(e) => setGenPrompt(e.target.value)} 
-                placeholder="Describe a new scene for the RuggedDev survivor. Use real-world brands (e.g. 'holding a Phantom wallet') for grounded accuracy. Powered by the Trench Engine..." 
+                placeholder="Describe a scene. Add project brands (e.g., 'Survivor holding a Solana shield'). AI will search for logos in Muted Cinematic style." 
                 className="w-full bg-[#111] border border-white/10 p-4 text-white min-h-[100px] rounded-xl mb-6 focus:border-rugged-red outline-none text-sm font-mono" 
               />
               
@@ -313,7 +316,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-white/40 uppercase tracking-widest ml-1">Resolution (Pro Forge)</label>
+                  <label className="text-[9px] font-black text-white/40 uppercase tracking-widest ml-1">Resolution (1K-4K)</label>
                   <div className="flex bg-[#111] border border-white/10 rounded-xl overflow-hidden">
                     {(['1K', '2K', '4K'] as const).map(size => (
                       <button
@@ -337,13 +340,13 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                   <div className="p-4 bg-white/5 border border-rugged-green/20 rounded-xl space-y-3 animate-reveal">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-rugged-green rounded-full"></div>
-                      <span className="text-[10px] font-black text-rugged-green uppercase tracking-widest">Morph Protocol (v2.5)</span>
+                      <span className="text-[10px] font-black text-rugged-green uppercase tracking-widest">Atmospheric Morph</span>
                     </div>
                     <div className="flex gap-2">
                       <input 
                         value={forgeEditPrompt} 
                         onChange={(e) => setForgeEditPrompt(e.target.value)} 
-                        placeholder="Apply changes (e.g. 'add a mask')..." 
+                        placeholder="Refine the scene..." 
                         className="flex-1 bg-black border border-white/10 p-3 text-white rounded-lg focus:border-rugged-green outline-none text-[11px] font-mono"
                       />
                       <button 
@@ -360,9 +363,9 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
               
               <div className="mt-8 relative rounded-2xl overflow-hidden border-2 border-white/5 aspect-square flex items-center justify-center bg-[#050505]">
                 {(isGenerating || isMorphing) ? (
-                  <div className="flex flex-col items-center">
+                  <div className="flex flex-col items-center px-6">
                     <div className="w-10 h-10 border-4 border-rugged-red border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <span className="font-black uppercase text-[10px] tracking-widest animate-pulse text-rugged-red">Syncing Trench Engine...</span>
+                    <span className="font-black uppercase text-[10px] tracking-widest animate-pulse text-rugged-red text-center">Sketching Cinematic Assets...</span>
                   </div>
                 ) : generatedImg ? (
                   <div className="relative w-full h-full group">
@@ -375,8 +378,8 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                   </div>
                 ) : (
                   <div className="text-center p-8 opacity-40">
-                    <p className="uppercase text-[#3A5F3D] text-[12px] font-black tracking-widest leading-loose">Forge Grounded Propaganda</p>
-                    <p className="text-[8px] font-bold uppercase tracking-widest mt-2 text-[#6E6E6E]">Using Trench Forge Pro with Google Search Guidance</p>
+                    <p className="uppercase text-[#3A5F3D] text-[12px] font-black tracking-widest leading-loose">Muted Cinematic Illustration Forge</p>
+                    <p className="text-[8px] font-bold uppercase tracking-widest mt-2 text-[#6E6E6E]">Clean illustrated style // Soft edges // Wojak focus</p>
                   </div>
                 )}
               </div>

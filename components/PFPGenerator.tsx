@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { FALLBACK_IMAGE, OFFICIAL_STORY_IMAGE } from '../constants';
@@ -22,7 +21,7 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
   const [isEditing, setIsEditing] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [aspectRatio, setAspectRatio] = useState('1:1');
-  const [imageSize, setImageSize] = useState('1K');
+  const [imageSize, setImageSize] = useState<'1K' | '2K' | '4K'>('1K');
   const [apiError, setApiError] = useState<string | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
@@ -32,7 +31,6 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
 
   const getBase64FromUrl = async (url: string): Promise<string> => {
     if (url.startsWith('data:')) return url.split(',')[1];
-    // Special case: If default image, we don't need base64 as AI uses text description
     if (url === OFFICIAL_STORY_IMAGE) return '';
     const response = await fetch(url);
     const blob = await response.blob();
@@ -93,19 +91,19 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
         const model = 'gemini-3-pro-image-preview';
         
         const identityPrompt = `
-          INSTRUCTION: Use Google Search for accurate logos/brands requested.
-          IDENTITY: The RuggedDev Wojak survivor. 
-          TRAITS: Pale Wojak face, extremely tired droopy eyes with dark circles, neutral mouth.
-          GEAR: Olive military helmet with crude hand-written 'SURVIVOR'.
-          ART STYLE: Extremely crude, simple hand-drawn internet meme style. Thick wobbly black outlines. Shaky lines. Flat single-color fills. No gradients or soft shading.
+          STYLE: Muted cinematic meme illustration. Soft, desaturated earthy colors and warm brown tones. Clearly illustrated, not realistic.
+          CHARACTER: Wojak-style portrait with a simple, flat meme face, minimal facial features, tired eyes, and cartoon proportions. Faces remain iconic and clearly non-realistic.
+          LINEWORK: Hand-drawn and slightly imperfect, with soft edges and subtle inconsistencies. No clean vector lines. No sketchbook roughness.
+          ANATOMY: Simplified and illustrated with believable proportions but low detail. 
+          GEAR: Olive military helmet with hand-written, uneven text reading 'SURVIVOR'.
           PFP VARIATION: ${forgePrompt}.
-          MANDATORY: One single character. Maintain the shaky, unpolished crude drawing look.
+          STRICTLY AVOID: photorealistic, realistic human face, oil painting, cinematic realism, dramatic lighting, detailed textures, 3D render, clean vector art, perfect linework.
+          SEARCH_GROUNDING: Use Google Search to find and incorporate any brand logos mentioned (e.g. Ethereum, pump.fun) but render them in this muted painterly style.
         `.trim();
         
         const config: any = {
           imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any },
-          // Fixed: tool name for gemini-3-pro-image-preview is google_search
-          tools: [{ google_search: {} }]
+          tools: [{ googleSearch: {} }]
         };
 
         return await ai.models.generateContent({
@@ -126,8 +124,8 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
       }
 
       if (foundImageUrl) { setPfpImage(foundImageUrl); setHasImage(true); sounds.playNeutralBlip(); }
-      else { throw new Error("Forge blocked by safety filters."); }
-    } catch (err: any) { setApiError(err.message || "Forge Error. Signal lost."); }
+      else { throw new Error("Forge response blocked by filters."); }
+    } catch (err: any) { setApiError(err.message || "Forge Error. Transmission failed."); }
     finally { setIsGenerating(false); }
   };
 
@@ -142,7 +140,7 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
       
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const characterLock = `Modify RuggedDev Wojak image. Keep tired eyes, helmet with 'SURVIVOR'. Maintain crude meme style with thick lines. EDIT: ${editPrompt}.`;
+        const characterLock = `Apply this change while keeping the Muted Cinematic Meme Illustration style (painterly shading, soft earthy colors, flat Wojak faces): ${editPrompt}. STRICTLY AVOID photorealism. Maintain tired Wojak eyes and 'SURVIVOR' helmet.`;
         
         return await ai.models.generateContent({
           model: 'gemini-2.5-flash-image',
@@ -151,6 +149,9 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
                 { inlineData: { data: base64Data, mimeType: mimeType } },
                 { text: characterLock }
               ]
+          },
+          config: {
+            tools: [{ googleSearch: {} }]
           }
         }) as GenerateContentResponse;
       });
@@ -169,7 +170,6 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
     finally { setIsEditing(false); setEditPrompt(''); }
   };
 
-  // Fixed: Added missing handleAddToGallery function
   const handleAddToGallery = () => {
     if (canvasRef.current && onImageGenerated) {
       onImageGenerated(canvasRef.current.toDataURL('image/png'));
@@ -200,7 +200,7 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
         ctx.fillStyle = 'white'; ctx.font = '900 60px Inter'; ctx.textAlign = 'center'; ctx.fillText('✓', 850, 870);
       } else if (overlay === 'survival') {
         ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(0, 850, 1000, 150);
-        ctx.fillStyle = 'white'; ctx.font = '900 35px Inter'; ctx.textAlign = 'center'; ctx.fillText('WOJAK SURVIVOR UNIT', 500, 950);
+        ctx.fillStyle = 'white'; ctx.font = '900 35px Inter'; ctx.textAlign = 'center'; ctx.fillText('SURVIVOR UNIT VERIFIED', 500, 950);
       }
       setIsDrawing(false);
     };
@@ -230,7 +230,7 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
                 <div className="w-1.5 h-1.5 bg-rugged-green rounded-full animate-pulse"></div>
                 <label className="text-[7px] md:text-[10px] font-black text-rugged-green uppercase tracking-widest">Web Search Active</label>
               </div>
-              <label className="text-[7px] md:text-[10px] font-black text-rugged-gray uppercase">Forge Pro</label>
+              <label className="text-[7px] md:text-[10px] font-black text-rugged-gray uppercase">Pro Forge (1K-4K)</label>
             </div>
 
             <div className="bg-[#111] p-2 md:p-4 border-2 border-dashed border-rugged-green/20 rounded-lg space-y-2 md:space-y-3">
@@ -243,19 +243,19 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
                   <option value="9:16">9:16</option>
                   <option value="16:9">16:9</option>
                 </select>
-                <select value={imageSize} onChange={(e) => setImageSize(e.target.value)} className="w-full bg-black border border-white/10 text-[8px] md:text-[10px] text-white p-1 font-bold rounded">
+                <select value={imageSize} onChange={(e) => setImageSize(e.target.value as any)} className="w-full bg-black border border-white/10 text-[8px] md:text-[10px] text-white p-1 font-bold rounded">
                   <option value="1K">1K</option><option value="2K">2K</option><option value="4K">4K</option>
                 </select>
               </div>
-              <textarea value={forgePrompt} onChange={(e) => setForgePrompt(e.target.value)} placeholder="Traits (e.g., 'wearing a Solana hat')..." className="w-full bg-black border border-rugged-gray/20 p-1 text-white font-mono text-[9px] min-h-[40px] md:min-h-[60px] rounded outline-none focus:border-rugged-green" />
+              <textarea value={forgePrompt} onChange={(e) => setForgePrompt(e.target.value)} placeholder="Meme traits + Web logos (e.g., 'Solana hat')..." className="w-full bg-black border border-rugged-gray/20 p-1 text-white font-mono text-[9px] min-h-[40px] md:min-h-[60px] rounded outline-none focus:border-rugged-green" />
               <button onClick={generatePFP} disabled={isGenerating || !forgePrompt.trim()} className="w-full py-2 bg-rugged-green text-white font-black text-[8px] uppercase rounded hover:brightness-110 active:scale-95 transition-all">
                 {isGenerating ? 'FORGING...' : 'SUMMON'}
               </button>
             </div>
 
             <div className="bg-[#111] p-2 md:p-4 border border-rugged-gray/10 rounded-lg space-y-2">
-              <label className="text-[7px] md:text-[10px] font-black text-rugged-gray uppercase">Morph (Legacy)</label>
-              <input value={editPrompt} onChange={(e) => setEditPrompt(e.target.value)} placeholder="Filter..." className="w-full bg-black border border-rugged-gray/20 p-1 text-white font-mono text-[9px] rounded outline-none" />
+              <label className="text-[7px] md:text-[10px] font-black text-rugged-gray uppercase">Morph</label>
+              <input value={editPrompt} onChange={(e) => setEditPrompt(e.target.value)} placeholder="Refine identity..." className="w-full bg-black border border-rugged-gray/20 p-1 text-white font-mono text-[9px] rounded outline-none" />
               <button onClick={editPFP} disabled={isEditing || !editPrompt.trim()} className="w-full py-1.5 bg-white text-black font-black text-[8px] uppercase rounded hover:bg-rugged-gray transition-all">
                 {isEditing ? '...' : 'MORPH'}
               </button>
