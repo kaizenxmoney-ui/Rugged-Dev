@@ -140,7 +140,6 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
         const model = 'gemini-3-pro-image-preview';
         const baseImgInfo = await getProcessedImageData(baseImage);
 
-        // MUTED CINEMATIC MEME ILLUSTRATION PROMPT - UPDATED FOR SPECIFICITY
         const identityPrompt = `
           STYLE: Muted cinematic meme illustration. Soft, desaturated earthy colors and warm brown tones. Clearly illustrated, not realistic.
           CHARACTER: Wojak-style characters with simple, flat meme faces, minimal facial features, tired eyes, and cartoon proportions. Faces remain iconic and clearly non-realistic.
@@ -197,14 +196,15 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         return await ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
+          model: 'gemini-3-pro-image-preview', // Upgraded to Nano Pro
           contents: {
             parts: [
               { inlineData: { data: imgInfo?.data || '', mimeType: imgInfo?.mimeType || 'image/png' } },
-              { text: `Maintain the Muted Cinematic Meme Illustration style (soft earthy colors, flat Wojak faces, imperfect linework). Apply change: ${forgeEditPrompt}. STRICTLY AVOID photorealism or clean vector art.` }
+              { text: `Maintain the Muted Cinematic Meme Illustration style (soft earthy colors, flat Wojak faces, imperfect linework). Apply change: ${forgeEditPrompt}. STRICTLY AVOID photorealism or clean vector art. Ensure character remains a simplified Wojak with tired eyes and 'SURVIVOR' helmet.` }
             ]
           },
           config: {
+            imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any }, // Size affordance used here too
             tools: [{ googleSearch: {} }]
           }
         }) as GenerateContentResponse;
@@ -294,7 +294,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
             <div className="border-2 sm:border-4 border-white/5 bg-black p-4 sm:p-10 rounded-2xl sm:rounded-[2rem] shadow-2xl relative">
               <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
                 <h3 className="text-lg sm:text-xl font-black text-rugged-red uppercase italic tracking-widest">Trench Forge Pro</h3>
-                <span className="bg-rugged-red text-white text-[8px] font-black px-2 py-0.5 rounded uppercase">Web Search Ready</span>
+                <span className="bg-rugged-red text-white text-[8px] font-black px-2 py-0.5 rounded uppercase">Nano Pro Powered</span>
               </div>
               
               <textarea 

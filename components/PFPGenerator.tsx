@@ -140,10 +140,10 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
       
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const characterLock = `Apply this change while keeping the Muted Cinematic Meme Illustration style (painterly shading, soft earthy colors, flat Wojak faces): ${editPrompt}. STRICTLY AVOID photorealism. Maintain tired Wojak eyes and 'SURVIVOR' helmet.`;
+        const characterLock = `Apply this change while keeping the Muted Cinematic Meme Illustration style (painterly shading, soft earthy colors, flat Wojak faces): ${editPrompt}. STRICTLY AVOID photorealism. Maintain tired Wojak eyes and 'SURVIVOR' helmet. Ensure non-realistic illustrated aesthetic.`;
         
         return await ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
+          model: 'gemini-3-pro-image-preview', // Upgraded to Nano Pro
           contents: {
               parts: [
                 { inlineData: { data: base64Data, mimeType: mimeType } },
@@ -151,6 +151,7 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
               ]
           },
           config: {
+            imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any }, // Size affordance used here too
             tools: [{ googleSearch: {} }]
           }
         }) as GenerateContentResponse;
@@ -207,7 +208,7 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
     img.src = pfpImage;
   };
 
-  useEffect(() => { drawPFP(); }, [pfpImage, frameType, zoom, overlay, aspectRatio, hasImage]);
+  useEffect(() => { drawPFP(); }, [pfpImage, frameType, zoom, overlay, aspectRatio, hasImage, imageSize]);
 
   return (
     <section id="pfp-forge" className="py-8 md:py-24 bg-[#0d0d0d] border-t-2 border-[#6E6E6E]/10">
@@ -230,7 +231,7 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
                 <div className="w-1.5 h-1.5 bg-rugged-green rounded-full animate-pulse"></div>
                 <label className="text-[7px] md:text-[10px] font-black text-rugged-green uppercase tracking-widest">Web Search Active</label>
               </div>
-              <label className="text-[7px] md:text-[10px] font-black text-rugged-gray uppercase">Pro Forge (1K-4K)</label>
+              <label className="text-[7px] md:text-[10px] font-black text-rugged-gray uppercase">Nano Pro Forge</label>
             </div>
 
             <div className="bg-[#111] p-2 md:p-4 border-2 border-dashed border-rugged-green/20 rounded-lg space-y-2 md:space-y-3">

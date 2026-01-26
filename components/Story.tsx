@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { RevealText } from './RevealText';
 import { OFFICIAL_STORY_IMAGE } from '../constants';

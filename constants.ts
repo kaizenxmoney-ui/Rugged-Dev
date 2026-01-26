@@ -10,7 +10,7 @@ export const COLORS = {
 /**
  * The absolute permanent official mascot image for the story section. 
  * This is the Wojak Survivor ($RDEV) character.
- * Hardcoded to the raw GitHub link to ensure it never "removes" itself.
+ * Hardcoded to the raw GitHub link to ensure it stays permanent.
  */
 export const OFFICIAL_STORY_IMAGE = "https://raw.githubusercontent.com/kaizenxmoney-ui/Rugged-Dev/main/ruggeddev.png";
 

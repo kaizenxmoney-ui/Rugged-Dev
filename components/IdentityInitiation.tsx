@@ -33,9 +33,9 @@ export const IdentityInitiation: React.FC<IdentityInitiationProps> = ({ onIdenti
     }
   };
 
-  // Determine what to display: the new preview OR the already saved current identity
+  // Ensure displayImage always has a value (either preview, current, or fallback)
+  const displayImage = preview || currentIdentity || FALLBACK_IMAGE;
   const isConfirmed = currentIdentity && currentIdentity !== FALLBACK_IMAGE;
-  const displayImage = preview || (isConfirmed ? currentIdentity : null);
 
   return (
     <section className="py-20 bg-black border-y border-[#3A5F3D]/20">
@@ -94,17 +94,14 @@ export const IdentityInitiation: React.FC<IdentityInitiationProps> = ({ onIdenti
 
             <div className="w-full md:w-1/3 flex justify-center">
               <div className="relative w-64 h-64 border-4 border-white/10 rounded-3xl overflow-hidden bg-black shadow-2xl group cursor-pointer" onClick={() => !preview && fileInputRef.current?.click()}>
-                {displayImage ? (
-                  <img 
-                    src={displayImage} 
-                    alt="Survivor Identity" 
-                    className={`w-full h-full object-cover ${preview ? 'animate-reveal' : ''}`} 
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center opacity-40 group-hover:opacity-100 transition-opacity">
-                    <p className="text-[12px] font-black uppercase tracking-[0.3em] text-[#3A5F3D]">Add Character</p>
-                  </div>
-                )}
+                <img 
+                  src={displayImage} 
+                  alt="Survivor Identity" 
+                  className={`w-full h-full object-cover ${preview ? 'animate-reveal' : ''}`} 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
+                  }}
+                />
                 <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[length:100%_4px] opacity-20"></div>
                 <div className="absolute top-0 left-0 w-full h-[2px] bg-[#3A5F3D] shadow-[0_0_10px_#3A5F3D] animate-[scan_4s_linear_infinite] opacity-30"></div>
               </div>

@@ -1,5 +1,4 @@
-
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { RevealText } from './RevealText';
 import { FALLBACK_IMAGE } from '../constants';
 import { sounds } from '../utils/sounds';
@@ -11,6 +10,7 @@ interface GalleryProps {
 
 export const Gallery: React.FC<GalleryProps> = ({ images, onDeleteImage }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // Memoize the marquee content to ensure it fills the screen width for the infinite loop
   const marqueeImages = useMemo(() => {
@@ -72,7 +72,11 @@ export const Gallery: React.FC<GalleryProps> = ({ images, onDeleteImage }) => {
           </div>
           <div className="flex animate-[marquee_40s_linear_infinite] whitespace-nowrap">
             {marqueeImages.map((img, i) => (
-              <div key={`marquee-${i}`} className="inline-block w-48 h-48 md:w-64 md:h-64 flex-shrink-0 mx-4 border-2 border-white/10 rounded-xl overflow-hidden group relative">
+              <div 
+                key={`marquee-${i}`} 
+                onClick={() => { setSelectedImage(img); sounds.playClick(); }}
+                className="inline-block w-48 h-48 md:w-64 md:h-64 flex-shrink-0 mx-4 border-2 border-white/10 rounded-xl overflow-hidden group relative cursor-pointer"
+              >
                 <img 
                   src={img} 
                   alt="Propaganda" 
@@ -124,8 +128,9 @@ export const Gallery: React.FC<GalleryProps> = ({ images, onDeleteImage }) => {
               {images.map((displayImg, i) => (
                 <div 
                   key={i} 
+                  onClick={() => { setSelectedImage(displayImg); sounds.playClick(); }}
                   className={`
-                    group relative overflow-hidden border-2 border-[#6E6E6E]/20 rounded-3xl bg-black aspect-square shadow-2xl transition-all hover:border-rugged-green/40 
+                    group relative overflow-hidden border-2 border-[#6E6E6E]/20 rounded-3xl bg-black aspect-square shadow-2xl transition-all hover:border-rugged-green/40 cursor-pointer
                     ${isLargeGallery ? 'min-w-[300px] md:min-w-[400px] snap-start' : 'w-full'}
                   `}
                 >
@@ -194,6 +199,143 @@ export const Gallery: React.FC<GalleryProps> = ({ images, onDeleteImage }) => {
           </>
         )}
       </div>
+
+      {/* Lightbox Modal */}
+      {selectedImage && (
+        <Lightbox 
+          src={selectedImage} 
+          onClose={() => { setSelectedImage(null); sounds.playClick(); }} 
+        />
+      )}
     </section>
+  );
+};
+
+interface LightboxProps {
+  src: string;
+  onClose: () => void;
+}
+
+const Lightbox: React.FC<LightboxProps> = ({ src, onClose }) => {
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleZoomIn = () => setScale(prev => Math.min(prev + 0.5, 5));
+  const handleZoomOut = () => {
+    setScale(prev => {
+      const next = Math.max(prev - 0.5, 1);
+      if (next === 1) setPosition({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (scale === 1) return;
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setPosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y
+    });
+  };
+
+  const handleMouseUp = () => setIsDragging(false);
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+
+  return (
+    <div 
+      className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 sm:p-10"
+      onMouseUp={handleMouseUp}
+    >
+      {/* Lightbox Header / UI */}
+      <div className="absolute top-0 left-0 w-full p-4 sm:p-8 flex justify-between items-center z-50 pointer-events-none">
+        <div className="bg-rugged-green/10 border border-rugged-green/20 px-4 py-2 rounded-xl backdrop-blur-md">
+          <span className="text-rugged-green font-black text-[10px] sm:text-xs uppercase tracking-widest animate-pulse">
+            Secure_Propaganda_View // {Math.round(scale * 100)}%
+          </span>
+        </div>
+        <button 
+          onClick={onClose}
+          className="pointer-events-auto bg-rugged-red text-white p-3 sm:p-4 rounded-xl hover:scale-110 active:scale-95 transition-all shadow-2xl border border-white/20"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      {/* Main Image Viewport */}
+      <div 
+        ref={containerRef}
+        className="relative w-full h-full flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+      >
+        <div 
+          className="transition-transform duration-200 ease-out will-change-transform"
+          style={{ 
+            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+          }}
+        >
+          <img 
+            src={src} 
+            alt="Propaganda High Res" 
+            className="max-w-[90vw] max-h-[80vh] object-contain shadow-[0_0_100px_rgba(0,0,0,1)] border-4 border-white/5 rounded-2xl"
+            draggable={false}
+          />
+        </div>
+      </div>
+
+      {/* Lightbox Controls */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 bg-black/60 border border-white/10 p-2 rounded-2xl backdrop-blur-xl shadow-2xl">
+        <button 
+          onClick={handleZoomOut}
+          disabled={scale <= 1}
+          className="p-4 text-white hover:bg-white/10 rounded-xl transition-all disabled:opacity-20"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+        <div className="w-[1px] h-8 bg-white/10 my-auto"></div>
+        <button 
+          onClick={() => { setScale(1); setPosition({ x: 0, y: 0 }); sounds.playClick(); }}
+          className="px-6 text-white font-black text-xs uppercase tracking-widest hover:bg-white/10 rounded-xl transition-all"
+        >
+          Reset
+        </button>
+        <div className="w-[1px] h-8 bg-white/10 my-auto"></div>
+        <button 
+          onClick={handleZoomIn}
+          disabled={scale >= 5}
+          className="p-4 text-white hover:bg-white/10 rounded-xl transition-all disabled:opacity-20"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+      
+      {/* Visual Scanners */}
+      <div className="absolute inset-0 pointer-events-none opacity-20 border-[20px] border-black/50 sm:border-[40px]">
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-rugged-green shadow-[0_0_20px_#3A5F3D] animate-[scan_4s_linear_infinite]"></div>
+      </div>
+    </div>
   );
 };
