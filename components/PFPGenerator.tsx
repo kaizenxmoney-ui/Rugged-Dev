@@ -12,7 +12,7 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
   const [pfpImage, setPfpImage] = useState<string>(FALLBACK_IMAGE);
   const [frameType, setFrameType] = useState<'circle' | 'square'>('circle');
   const [zoom, setZoom] = useState(1);
-  const [overlay, setOverlay] = useState<'none' | 'verified' | 'glitch' | 'survival'>('verified');
+  const [overlay, setOverlay] = useState<'none' | 'verified' | 'glitch' | 'survival'>('none');
   const [hasImage, setHasImage] = useState(true);
 
   const [forgePrompt, setForgePrompt] = useState('');
@@ -28,6 +28,16 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const loadCountRef = useRef(0);
+
+  const TRENCH_FORGE_PROTOCOL = `
+    TRENCH FORGE PROTOCOL - ART STYLE (STRICT):
+    - STYLE: Modern Wojak meme comic style. Simple, flat, stylized digital meme panel. Bold, clean outlines, flat color fills enhanced by very subtle soft gradients.
+    - CHARACTER: One Wojak-style male survivor. Military helmet with "SURVIVOR" clearly written.
+    - FACE: Pale clean white skin, simple black outlines, tired eyes, neutral expression.
+    - COLOR: Neutral palette, clean whites. NO war grading. NO sepia.
+    - BRANDING: Subtle small "$RDEV" text hidden.
+    - NEGATIVE: photorealistic, semi-realistic, graphic novel, cinematic, 3D render, anime.
+  `;
 
   const getBase64FromUrl = async (url: string): Promise<string> => {
     if (url.startsWith('data:')) return url.split(',')[1];
@@ -90,15 +100,9 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const model = 'gemini-3-pro-image-preview';
         
-        const identityPrompt = `
-          STYLE: Muted cinematic meme illustration. Soft, desaturated earthy colors and warm brown tones. Clearly illustrated, not realistic.
-          CHARACTER: Wojak-style portrait with a simple, flat meme face, minimal facial features, tired eyes, and cartoon proportions. Faces remain iconic and clearly non-realistic.
-          LINEWORK: Hand-drawn and slightly imperfect, with soft edges and subtle inconsistencies. No clean vector lines. No sketchbook roughness.
-          ANATOMY: Simplified and illustrated with believable proportions but low detail. 
-          GEAR: Olive military helmet with hand-written, uneven text reading 'SURVIVOR'.
-          PFP VARIATION: ${forgePrompt}.
-          STRICTLY AVOID: photorealistic, realistic human face, oil painting, cinematic realism, dramatic lighting, detailed textures, 3D render, clean vector art, perfect linework.
-          SEARCH_GROUNDING: Use Google Search to find and incorporate any brand logos mentioned (e.g. Ethereum, pump.fun) but render them in this muted painterly style.
+        const fullPrompt = `
+          ${TRENCH_FORGE_PROTOCOL}
+          PFP VARIATION REQUEST: ${forgePrompt}
         `.trim();
         
         const config: any = {
@@ -108,7 +112,7 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
 
         return await ai.models.generateContent({
           model,
-          contents: { parts: [{ text: identityPrompt }] },
+          contents: { parts: [{ text: fullPrompt }] },
           config
         }) as GenerateContentResponse;
       });
@@ -140,18 +144,18 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
       
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const characterLock = `Apply this change while keeping the Muted Cinematic Meme Illustration style (painterly shading, soft earthy colors, flat Wojak faces): ${editPrompt}. STRICTLY AVOID photorealism. Maintain tired Wojak eyes and 'SURVIVOR' helmet. Ensure non-realistic illustrated aesthetic.`;
+        const instruction = `Apply change to the PFP: ${editPrompt}. Maintain Trench Forge comic meme style: ${TRENCH_FORGE_PROTOCOL}`;
         
         return await ai.models.generateContent({
-          model: 'gemini-3-pro-image-preview', // Upgraded to Nano Pro
+          model: 'gemini-3-pro-image-preview',
           contents: {
               parts: [
                 { inlineData: { data: base64Data, mimeType: mimeType } },
-                { text: characterLock }
+                { text: instruction }
               ]
           },
           config: {
-            imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any }, // Size affordance used here too
+            imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any },
             tools: [{ googleSearch: {} }]
           }
         }) as GenerateContentResponse;
@@ -202,6 +206,13 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
       } else if (overlay === 'survival') {
         ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(0, 850, 1000, 150);
         ctx.fillStyle = 'white'; ctx.font = '900 35px Inter'; ctx.textAlign = 'center'; ctx.fillText('SURVIVOR UNIT VERIFIED', 500, 950);
+      } else if (overlay === 'glitch') {
+        ctx.fillStyle = 'rgba(193, 39, 45, 0.15)';
+        for(let i=0; i<15; i++) {
+          ctx.fillRect(0, Math.random()*1000, 1000, Math.random()*10 + 2);
+        }
+        ctx.fillStyle = 'rgba(58, 95, 61, 0.1)';
+        ctx.fillRect(Math.random()*1000, 0, Math.random()*50, 1000);
       }
       setIsDrawing(false);
     };
@@ -248,7 +259,7 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
                   <option value="1K">1K</option><option value="2K">2K</option><option value="4K">4K</option>
                 </select>
               </div>
-              <textarea value={forgePrompt} onChange={(e) => setForgePrompt(e.target.value)} placeholder="Meme traits + Web logos (e.g., 'Solana hat')..." className="w-full bg-black border border-rugged-gray/20 p-1 text-white font-mono text-[9px] min-h-[40px] md:min-h-[60px] rounded outline-none focus:border-rugged-green" />
+              <textarea value={forgePrompt} onChange={(e) => setForgePrompt(e.target.value)} placeholder="Traits (e.g. 'Tired survivor')..." className="w-full bg-black border border-rugged-gray/20 p-1 text-white font-mono text-[9px] min-h-[40px] md:min-h-[60px] rounded outline-none focus:border-rugged-green" />
               <button onClick={generatePFP} disabled={isGenerating || !forgePrompt.trim()} className="w-full py-2 bg-rugged-green text-white font-black text-[8px] uppercase rounded hover:brightness-110 active:scale-95 transition-all">
                 {isGenerating ? 'FORGING...' : 'SUMMON'}
               </button>
@@ -263,6 +274,19 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
             </div>
 
             <div className="grid grid-cols-1 gap-2">
+              <div className="space-y-1">
+                <label className="text-[7px] font-black text-rugged-gray uppercase">Identity Badge</label>
+                <select 
+                  value={overlay} 
+                  onChange={(e) => { setOverlay(e.target.value as any); sounds.playRelayClick(); }} 
+                  className="w-full bg-black border border-white/10 text-[8px] md:text-[10px] text-white p-1.5 font-bold rounded outline-none"
+                >
+                  <option value="none">UNVERIFIED_SUBJECT</option>
+                  <option value="verified">VERIFIED_SURVIVOR</option>
+                  <option value="survival">TRENCH_UNIT_VERIFIED</option>
+                  <option value="glitch">GLITCH_SCAN_ACTIVE</option>
+                </select>
+              </div>
               <div className="space-y-1">
                 <label className="text-[7px] font-black text-rugged-gray uppercase">Zoom</label>
                 <input type="range" min="1" max="3" step="0.01" value={zoom} onChange={(e) => setZoom(parseFloat(e.target.value))} className="w-full accent-rugged-green" />

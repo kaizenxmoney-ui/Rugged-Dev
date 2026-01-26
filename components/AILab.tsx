@@ -27,6 +27,17 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
   const [searchGrounding, setSearchGrounding] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(sounds.isSoundEnabled());
 
+  const TRENCH_FORGE_PROTOCOL = `
+    TRENCH FORGE PROTOCOL - ART STYLE (STRICT):
+    - STYLE: Modern Wojak meme comic style. Simple, flat, stylized digital meme panel. Bold, clean outlines, flat color fills enhanced by very subtle soft gradients for depth. 
+    - AVOID: Realism, painterly textures, cinematic illustration, 3D render, ultra-flat MS Paint style, vector icon style, heavy grunge, dirty whites.
+    - CHARACTER: Single Wojak-style male survivor. Military helmet with "SURVIVOR" clearly written.
+    - FACE: Pale clean white skin, simple black outlines, tired eyes, neutral/calm/resigned expression.
+    - COLOR & LIGHTING: Neutral and balanced palette, clean whites, muted tones. Even lighting, simple sense of form but no cinematic effects.
+    - BRANDING: Subtle small "$RDEV" text hidden in the scene (e.g. edge of table, wall scribble).
+    - NEGATIVE: photorealistic, war illustration, cinematic lighting, heavy textures, painterly shading, gritty realism, muddy colors, anime, manga, exaggerated expressions.
+  `;
+
   const toggleSound = () => {
     const newState = !soundEnabled;
     setSoundEnabled(newState);
@@ -113,10 +124,11 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
     setIsTyping(true);
     try {
       const response = await withRetry(async () => {
+        // Chat uses gemini-3-flash-preview as per requirement
         const model = thinkingMode ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const config: any = {
-          systemInstruction: "You are the RuggedDev Intelligence Hub. Analyze crypto trends and rug pulls. Use Google Search to provide up-to-date and accurate information to survivors in the trenches.",
+          systemInstruction: "You are the RuggedDev Intelligence Hub. Analyze crypto trends and rug pulls. Use Google Search to provide up-to-date and accurate information. Maintain a gritty, survivalist tone, but focus on accuracy. If Google Search is used, provide clear citations.",
         };
         if (searchGrounding) config.tools = [{ googleSearch: {} }];
         if (thinkingMode) config.thinkingConfig = { thinkingBudget: 32768 };
@@ -137,21 +149,12 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
     try {
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const model = 'gemini-3-pro-image-preview';
+        const model = 'gemini-3-pro-image-preview'; // High quality image generation
         const baseImgInfo = await getProcessedImageData(baseImage);
 
-        const identityPrompt = `
-          STYLE: Muted cinematic meme illustration. Soft, desaturated earthy colors and warm brown tones. Clearly illustrated, not realistic.
-          CHARACTER: Wojak-style characters with simple, flat meme faces, minimal facial features, tired eyes, and cartoon proportions. Faces remain iconic and clearly non-realistic.
-          LINEWORK: Hand-drawn and slightly imperfect, with soft edges and subtle inconsistencies. No clean vector lines. No sketchbook roughness. Controlled, human-looking illustration.
-          ANATOMY: Bodies are simplified and illustrated with believable proportions but low detail. No anatomical realism.
-          THEME: Crypto or rug-pull themed modern art. Symbolic elements like broken charts, ironic signs, abandoned environments, or subtle Web3 references. 
-          MOOD: The scene feels ironic, calm, and emotionally muted rather than dramatic. Soft warm lighting.
-          GEAR: Military survivor metaphor: simple olive helmet with hand-written, uneven text reading 'SURVIVOR'. Clothing is symbolic and illustrated, not realistic combat gear.
-          HIDDEN: A small '$RDEV' text is subtly hidden somewhere in the image like a scribble, graffiti, or signature. 
-          STRICTLY AVOID: photorealistic, realistic human face, oil painting, concept art, cinematic realism, dramatic lighting, ultra-detailed textures, painterly realism, glossy finish, 3D render, anime style, Pixar style, clean vector art, perfect linework, sharp outlines, sketchbook doodle, rough pencil drawing, realistic food, realistic clothing, realistic soldier gear.
-          GROUNDING: Use Google Search to find and incorporate brands or logos mentioned (e.g., Solana) but render them in this muted painterly style.
-          USER_REQUEST: ${genPrompt}.
+        const fullPrompt = `
+          ${TRENCH_FORGE_PROTOCOL}
+          USER_REQUEST: ${genPrompt}
         `.trim();
         
         const config: any = { 
@@ -162,9 +165,9 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
         const parts: any[] = [];
         if (baseImgInfo) {
            parts.push({ inlineData: { data: baseImgInfo.data, mimeType: baseImgInfo.mimeType } });
-           parts.push({ text: `REFERENCE ATTACHED: Use this character but strictly follow the Muted Cinematic Meme Illustration style: ${identityPrompt}` });
+           parts.push({ text: `REFERENCE ATTACHED: Use this identity while strictly adhering to the TRENCH FORGE PROTOCOL comic meme style: ${fullPrompt}` });
         } else {
-           parts.push({ text: `INITIATE FORGE PROTOCOL (Muted Cinematic Meme Style): ${identityPrompt}` });
+           parts.push({ text: `INITIATE FORGE PROTOCOL: ${fullPrompt}` });
         }
 
         return await ai.models.generateContent({ model, contents: { parts }, config }) as GenerateContentResponse;
@@ -196,15 +199,15 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         return await ai.models.generateContent({
-          model: 'gemini-3-pro-image-preview', // Upgraded to Nano Pro
+          model: 'gemini-3-pro-image-preview',
           contents: {
             parts: [
               { inlineData: { data: imgInfo?.data || '', mimeType: imgInfo?.mimeType || 'image/png' } },
-              { text: `Maintain the Muted Cinematic Meme Illustration style (soft earthy colors, flat Wojak faces, imperfect linework). Apply change: ${forgeEditPrompt}. STRICTLY AVOID photorealism or clean vector art. Ensure character remains a simplified Wojak with tired eyes and 'SURVIVOR' helmet.` }
+              { text: `Maintain the Trench Forge meme style. Apply change: ${forgeEditPrompt}. ${TRENCH_FORGE_PROTOCOL}` }
             ]
           },
           config: {
-            imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any }, // Size affordance used here too
+            imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any },
             tools: [{ googleSearch: {} }]
           }
         }) as GenerateContentResponse;
@@ -300,7 +303,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
               <textarea 
                 value={genPrompt} 
                 onChange={(e) => setGenPrompt(e.target.value)} 
-                placeholder="Describe a scene. Add project brands (e.g., 'Survivor holding a Solana shield'). AI will search for logos in Muted Cinematic style." 
+                placeholder="Describe a scene (e.g. 'Single survivor sitting alone at table'). Forge Pro will render in flat Wojak comic style." 
                 className="w-full bg-[#111] border border-white/10 p-4 text-white min-h-[100px] rounded-xl mb-6 focus:border-rugged-red outline-none text-sm font-mono" 
               />
               
@@ -365,7 +368,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                 {(isGenerating || isMorphing) ? (
                   <div className="flex flex-col items-center px-6">
                     <div className="w-10 h-10 border-4 border-rugged-red border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <span className="font-black uppercase text-[10px] tracking-widest animate-pulse text-rugged-red text-center">Sketching Cinematic Assets...</span>
+                    <span className="font-black uppercase text-[10px] tracking-widest animate-pulse text-rugged-red text-center">Sketching Meme Assets...</span>
                   </div>
                 ) : generatedImg ? (
                   <div className="relative w-full h-full group">
@@ -378,8 +381,8 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                   </div>
                 ) : (
                   <div className="text-center p-8 opacity-40">
-                    <p className="uppercase text-[#3A5F3D] text-[12px] font-black tracking-widest leading-loose">Muted Cinematic Illustration Forge</p>
-                    <p className="text-[8px] font-bold uppercase tracking-widest mt-2 text-[#6E6E6E]">Clean illustrated style // Soft edges // Wojak focus</p>
+                    <p className="uppercase text-[#3A5F3D] text-[12px] font-black tracking-widest leading-loose">Trench Forge Protocol</p>
+                    <p className="text-[8px] font-bold uppercase tracking-widest mt-2 text-[#6E6E6E]">Modern Wojak Meme Style // Clean Linework // Flat Colors</p>
                   </div>
                 )}
               </div>

@@ -36,6 +36,7 @@ export const IdentityInitiation: React.FC<IdentityInitiationProps> = ({ onIdenti
   // Ensure displayImage always has a value (either preview, current, or fallback)
   const displayImage = preview || currentIdentity || FALLBACK_IMAGE;
   const isConfirmed = currentIdentity && currentIdentity !== FALLBACK_IMAGE;
+  const isEmpty = !isConfirmed && !preview;
 
   return (
     <section className="py-20 bg-black border-y border-[#3A5F3D]/20">
@@ -50,8 +51,8 @@ export const IdentityInitiation: React.FC<IdentityInitiationProps> = ({ onIdenti
               </RevealText>
               
               <div className="mb-6">
-                <p className="text-[#3A5F3D] font-black text-xl uppercase tracking-[0.2em] animate-pulse mb-2">
-                  {isConfirmed && !preview ? 'Identity Verified' : 'Verify your visual identity'}
+                <p className={`font-black text-xl uppercase tracking-[0.2em] mb-2 ${isConfirmed && !preview ? 'text-rugged-green animate-pulse' : 'text-rugged-red animate-pulse'}`}>
+                  {isConfirmed && !preview ? 'Identity Verified' : 'AWAITING_BIOMETRIC_DATA'}
                 </p>
                 <p className="text-[#6E6E6E] font-medium text-lg uppercase tracking-widest leading-relaxed">
                   {isConfirmed && !preview 
@@ -65,7 +66,7 @@ export const IdentityInitiation: React.FC<IdentityInitiationProps> = ({ onIdenti
                   onClick={() => fileInputRef.current?.click()}
                   className="px-10 py-5 bg-[#3A5F3D] text-white font-black text-xl uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_10px_30px_rgba(58,95,61,0.3)] rounded-xl"
                 >
-                  {isConfirmed ? 'RE-FORGE IDENTITY' : 'UPLOAD VISUAL'}
+                  {isConfirmed ? 'RE-FORGE IDENTITY' : 'INITIATE UPLOAD'}
                 </button>
               ) : (
                 <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
@@ -93,17 +94,48 @@ export const IdentityInitiation: React.FC<IdentityInitiationProps> = ({ onIdenti
             </div>
 
             <div className="w-full md:w-1/3 flex justify-center">
-              <div className="relative w-64 h-64 border-4 border-white/10 rounded-3xl overflow-hidden bg-black shadow-2xl group cursor-pointer" onClick={() => !preview && fileInputRef.current?.click()}>
+              <div 
+                className="relative w-64 h-64 border-4 border-white/10 rounded-3xl overflow-hidden bg-black shadow-2xl group cursor-pointer transition-all hover:border-rugged-green/50" 
+                onClick={() => !preview && fileInputRef.current?.click()}
+              >
                 <img 
                   src={displayImage} 
                   alt="Survivor Identity" 
-                  className={`w-full h-full object-cover ${preview ? 'animate-reveal' : ''}`} 
+                  className={`w-full h-full object-cover transition-all duration-700 ${preview ? 'animate-reveal' : isEmpty ? 'opacity-30 grayscale blur-sm' : 'opacity-100'}`} 
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
                   }}
                 />
+                
+                {/* Tactical Scan Overlays */}
                 <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[length:100%_4px] opacity-20"></div>
+                
+                {isEmpty && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
+                    {/* Targeting Reticle */}
+                    <div className="absolute inset-10 border-2 border-rugged-green/20 rounded-full animate-[spin_10s_linear_infinite]"></div>
+                    <div className="absolute inset-12 border border-dashed border-rugged-green/10 rounded-full animate-[spin_15s_linear_infinite_reverse]"></div>
+                    
+                    {/* Corner Brackets */}
+                    <div className="absolute top-6 left-6 w-8 h-8 border-t-4 border-l-4 border-rugged-green animate-pulse"></div>
+                    <div className="absolute top-6 right-6 w-8 h-8 border-t-4 border-r-4 border-rugged-green animate-pulse"></div>
+                    <div className="absolute bottom-6 left-6 w-8 h-8 border-b-4 border-l-4 border-rugged-green animate-pulse"></div>
+                    <div className="absolute bottom-6 right-6 w-8 h-8 border-b-4 border-r-4 border-rugged-green animate-pulse"></div>
+                    
+                    <div className="z-10 text-center">
+                      <p className="text-rugged-green font-black text-[10px] tracking-[0.3em] uppercase mb-1 drop-shadow-md">No_Data_Detected</p>
+                      <div className="h-[2px] w-20 bg-rugged-green/30 mx-auto animate-pulse"></div>
+                      <p className="text-white/40 font-mono text-[8px] uppercase mt-2 tracking-widest">Scanning_Visual_Planes...</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="absolute top-0 left-0 w-full h-[2px] bg-[#3A5F3D] shadow-[0_0_10px_#3A5F3D] animate-[scan_4s_linear_infinite] opacity-30"></div>
+                
+                {/* Confirmation Glow */}
+                {isConfirmed && !preview && (
+                  <div className="absolute inset-0 border-8 border-rugged-green/20 animate-pulse pointer-events-none"></div>
+                )}
               </div>
             </div>
           </div>
