@@ -124,7 +124,6 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
     setIsTyping(true);
     try {
       const response = await withRetry(async () => {
-        // Chat uses gemini-3-flash-preview as per requirement
         const model = thinkingMode ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const config: any = {
@@ -149,7 +148,10 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
     try {
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const model = 'gemini-3-pro-image-preview'; // High quality image generation
+        
+        // Strict usage of Nano Pro 3.0
+        const model = 'gemini-3-pro-image-preview';
+        
         const baseImgInfo = await getProcessedImageData(baseImage);
 
         const fullPrompt = `
@@ -158,8 +160,11 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
         `.trim();
         
         const config: any = { 
-          imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any },
-          tools: [{ googleSearch: {} }] 
+          imageConfig: { 
+            aspectRatio: aspectRatio as any,
+            imageSize: imageSize as any
+          },
+          tools: [{ googleSearch: {} }]
         };
 
         const parts: any[] = [];
@@ -198,18 +203,26 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
       const imgInfo = await getProcessedImageData(generatedImg);
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        
+        const model = 'gemini-3-pro-image-preview';
+        
+        const config: any = {
+          imageConfig: { 
+            aspectRatio: aspectRatio as any,
+            imageSize: imageSize as any
+          },
+          tools: [{ googleSearch: {} }]
+        };
+
         return await ai.models.generateContent({
-          model: 'gemini-3-pro-image-preview',
+          model,
           contents: {
             parts: [
               { inlineData: { data: imgInfo?.data || '', mimeType: imgInfo?.mimeType || 'image/png' } },
               { text: `Maintain the Trench Forge meme style. Apply change: ${forgeEditPrompt}. ${TRENCH_FORGE_PROTOCOL}` }
             ]
           },
-          config: {
-            imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any },
-            tools: [{ googleSearch: {} }]
-          }
+          config
         }) as GenerateContentResponse;
       });
 
@@ -297,7 +310,9 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
             <div className="border-2 sm:border-4 border-white/5 bg-black p-4 sm:p-10 rounded-2xl sm:rounded-[2rem] shadow-2xl relative">
               <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
                 <h3 className="text-lg sm:text-xl font-black text-rugged-red uppercase italic tracking-widest">Trench Forge Pro</h3>
-                <span className="bg-rugged-red text-white text-[8px] font-black px-2 py-0.5 rounded uppercase">Nano Pro Powered</span>
+                <div className="flex items-center gap-2">
+                  <span className="bg-rugged-red text-white text-[8px] font-black px-2 py-0.5 rounded uppercase">Nano Pro 3.0</span>
+                </div>
               </div>
               
               <textarea 
@@ -319,12 +334,12 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-white/40 uppercase tracking-widest ml-1">Resolution (1K-4K)</label>
+                  <label className="text-[9px] font-black text-white/40 uppercase tracking-widest ml-1">Resolution Config</label>
                   <div className="flex bg-[#111] border border-white/10 rounded-xl overflow-hidden">
                     {(['1K', '2K', '4K'] as const).map(size => (
                       <button
                         key={size}
-                        onClick={() => setImageSize(size)}
+                        onClick={() => { setImageSize(size); sounds.playRelayClick(); }}
                         className={`flex-1 py-3 text-[10px] font-black transition-all ${imageSize === size ? 'bg-rugged-red text-white' : 'text-white/40 hover:text-white'}`}
                       >
                         {size}

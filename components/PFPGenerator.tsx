@@ -98,6 +98,8 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
     try {
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        
+        // Strict Pro Tier
         const model = 'gemini-3-pro-image-preview';
         
         const fullPrompt = `
@@ -106,7 +108,10 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
         `.trim();
         
         const config: any = {
-          imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any },
+          imageConfig: { 
+            aspectRatio: aspectRatio as any,
+            imageSize: imageSize as any
+          },
           tools: [{ googleSearch: {} }]
         };
 
@@ -144,20 +149,28 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
       
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        
+        const model = 'gemini-3-pro-image-preview';
+        
         const instruction = `Apply change to the PFP: ${editPrompt}. Maintain Trench Forge comic meme style: ${TRENCH_FORGE_PROTOCOL}`;
         
+        const config: any = {
+          imageConfig: { 
+            aspectRatio: aspectRatio as any,
+            imageSize: imageSize as any
+          },
+          tools: [{ googleSearch: {} }]
+        };
+
         return await ai.models.generateContent({
-          model: 'gemini-3-pro-image-preview',
+          model,
           contents: {
               parts: [
                 { inlineData: { data: base64Data, mimeType: mimeType } },
                 { text: instruction }
               ]
           },
-          config: {
-            imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any },
-            tools: [{ googleSearch: {} }]
-          }
+          config
         }) as GenerateContentResponse;
       });
 
@@ -242,7 +255,9 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
                 <div className="w-1.5 h-1.5 bg-rugged-green rounded-full animate-pulse"></div>
                 <label className="text-[7px] md:text-[10px] font-black text-rugged-green uppercase tracking-widest">Web Search Active</label>
               </div>
-              <label className="text-[7px] md:text-[10px] font-black text-rugged-gray uppercase">Nano Pro Forge</label>
+              <div className="flex items-center gap-1.5">
+                <label className="text-[7px] md:text-[10px] font-black text-rugged-gray uppercase">Nano Pro Tier</label>
+              </div>
             </div>
 
             <div className="bg-[#111] p-2 md:p-4 border-2 border-dashed border-rugged-green/20 rounded-lg space-y-2 md:space-y-3">
@@ -255,7 +270,7 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
                   <option value="9:16">9:16</option>
                   <option value="16:9">16:9</option>
                 </select>
-                <select value={imageSize} onChange={(e) => setImageSize(e.target.value as any)} className="w-full bg-black border border-white/10 text-[8px] md:text-[10px] text-white p-1 font-bold rounded">
+                <select value={imageSize} onChange={(e) => { setImageSize(e.target.value as any); sounds.playRelayClick(); }} className="w-full bg-black border border-white/10 text-[8px] md:text-[10px] text-white p-1 font-bold rounded">
                   <option value="1K">1K</option><option value="2K">2K</option><option value="4K">4K</option>
                 </select>
               </div>

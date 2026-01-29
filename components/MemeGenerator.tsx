@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { FALLBACK_IMAGE } from '../constants';
@@ -113,25 +112,30 @@ export const MemeGenerator: React.FC<MemeGeneratorProps> = ({ baseImage, onReset
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const characterGuidance = `You are a professional crypto-survivor meme editor. Modify the input image of the RuggedDev Wojak character. Maintain the gritty, hand-drawn, exhausted Wojak identity. 
         REQUEST: ${editPrompt}. 
-        Examples of possible edits: "Add a retro filter", "Remove the background", "Add a soldier helmet", "Put him in a warzone".
-        Keep style consistent.`;
+        Keep style consistent with a modern Wojak meme comic style. Bold outlines, flat colors.`;
 
         return await ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
+          model: 'gemini-3-pro-image-preview',
           contents: {
             parts: [
               { inlineData: { data: base64Data, mimeType: mimeType } },
               { text: characterGuidance }
             ]
+          },
+          config: {
+            imageConfig: { aspectRatio: '1:1' },
+            tools: [{ googleSearch: {} }]
           }
         }) as GenerateContentResponse;
       });
 
       let foundImageUrl: string | null = null;
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          foundImageUrl = `data:image/png;base64,${part.inlineData.data}`;
-          break;
+      if (response.candidates?.[0]) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData) {
+            foundImageUrl = `data:image/png;base64,${part.inlineData.data}`;
+            break;
+          }
         }
       }
 
@@ -241,10 +245,10 @@ export const MemeGenerator: React.FC<MemeGeneratorProps> = ({ baseImage, onReset
             </div>
 
             <div className="p-2 sm:p-6 bg-[#111] border border-rugged-red/20 rounded-lg space-y-2">
-               <label className="text-[7px] sm:text-[9px] font-black text-rugged-red uppercase">Morph (Flash 2.5)</label>
-               <input value={editPrompt} onChange={(e) => setEditPrompt(e.target.value)} placeholder="Edit..." className="w-full bg-black border border-white/10 p-2 text-white font-mono text-[9px] rounded outline-none" />
+               <label className="text-[7px] sm:text-[9px] font-black text-rugged-red uppercase">Morph (Nano Pro 3.0)</label>
+               <input value={editPrompt} onChange={(e) => setEditPrompt(e.target.value)} placeholder="Edit with Pro..." className="w-full bg-black border border-white/10 p-2 text-white font-mono text-[9px] rounded outline-none" />
                <button onClick={editMemeImage} disabled={isEditing || !editPrompt.trim()} className="w-full py-2 bg-rugged-red text-white font-black uppercase text-[8px] rounded">
-                 {isEditing ? '...' : 'MORPH'}
+                 {isEditing ? '...' : 'MORPH PRO'}
                </button>
             </div>
 
