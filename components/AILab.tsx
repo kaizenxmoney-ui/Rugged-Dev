@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { RevealText } from './RevealText';
@@ -30,12 +31,10 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
   const TRENCH_FORGE_PROTOCOL = `
     TRENCH FORGE PROTOCOL - ART STYLE (STRICT):
     - STYLE: Modern Wojak meme comic style. Simple, flat, stylized digital meme panel. Bold, clean outlines, flat color fills enhanced by very subtle soft gradients for depth. 
-    - AVOID: Realism, painterly textures, cinematic illustration, 3D render, ultra-flat MS Paint style, vector icon style, heavy grunge, dirty whites.
     - CHARACTER: Single Wojak-style male survivor. Military helmet with "SURVIVOR" clearly written.
     - FACE: Pale clean white skin, simple black outlines, tired eyes, neutral/calm/resigned expression.
-    - COLOR & LIGHTING: Neutral and balanced palette, clean whites, muted tones. Even lighting, simple sense of form but no cinematic effects.
-    - BRANDING: Subtle small "$RDEV" text hidden in the scene (e.g. edge of table, wall scribble).
-    - NEGATIVE: photorealistic, war illustration, cinematic lighting, heavy textures, painterly shading, gritty realism, muddy colors, anime, manga, exaggerated expressions.
+    - COLOR & LIGHTING: Neutral and balanced palette, clean whites, muted tones. Even lighting.
+    - BRANDING: Subtle small "$RDEV" text hidden in the scene.
   `;
 
   const toggleSound = () => {
@@ -66,7 +65,8 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
       return new Promise((resolve) => {
         img.onload = () => {
           URL.revokeObjectURL(objectUrl);
-          const MAX_DIM = 1024; 
+          // High Speed Optimization: Clamp reference image to 512px for faster API handshaking
+          const MAX_DIM = 512; 
           let width = img.width;
           let height = img.height;
           if (width > MAX_DIM || height > MAX_DIM) {
@@ -78,7 +78,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
           const ctx = canvas.getContext('2d');
           if (!ctx) return resolve(null);
           ctx.drawImage(img, 0, 0, width, height);
-          const finalDataUrl = canvas.toDataURL(mimeType === 'image/jpeg' ? 'image/jpeg' : 'image/png', 0.85);
+          const finalDataUrl = canvas.toDataURL('image/jpeg', 0.8);
           const [header, data] = finalDataUrl.split(',');
           const finalMime = header.split(':')[1].split(';')[0];
           resolve({ data, mimeType: finalMime });
@@ -104,8 +104,8 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
           setApiError("Intel Key Invalid. Re-select your paid API key.");
           throw err;
         }
-        if ((err?.status === 503 || err?.status === 429 || msg.includes("overloaded") || msg.includes("rate limit")) && i < maxRetries - 1) {
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2.2, i) * 2000));
+        if ((err?.status === 503 || err?.status === 429 || msg.includes("overloaded")) && i < maxRetries - 1) {
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2.2, i) * 1500));
           continue;
         }
         throw err;
@@ -127,7 +127,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
         const model = thinkingMode ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const config: any = {
-          systemInstruction: "You are the RuggedDev Intelligence Hub. Analyze crypto trends and rug pulls. Use Google Search to provide up-to-date and accurate information. Maintain a gritty, survivalist tone, but focus on accuracy. If Google Search is used, provide clear citations.",
+          systemInstruction: "You are the RuggedDev Intelligence Hub. Analyze crypto trends and rug pulls. Use Google Search. Maintain a gritty tone.",
         };
         if (searchGrounding) config.tools = [{ googleSearch: {} }];
         if (thinkingMode) config.thinkingConfig = { thinkingBudget: 32768 };
@@ -148,16 +148,11 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
     try {
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        
-        // Strict usage of Nano Pro 3.0
-        const model = 'gemini-3-pro-image-preview';
+        const model = 'gemini-3-pro-image-preview'; // Exclusive Nano Pro
         
         const baseImgInfo = await getProcessedImageData(baseImage);
 
-        const fullPrompt = `
-          ${TRENCH_FORGE_PROTOCOL}
-          USER_REQUEST: ${genPrompt}
-        `.trim();
+        const fullPrompt = `${TRENCH_FORGE_PROTOCOL}\nUSER_REQUEST: ${genPrompt}`.trim();
         
         const config: any = { 
           imageConfig: { 
@@ -170,9 +165,9 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
         const parts: any[] = [];
         if (baseImgInfo) {
            parts.push({ inlineData: { data: baseImgInfo.data, mimeType: baseImgInfo.mimeType } });
-           parts.push({ text: `REFERENCE ATTACHED: Use this identity while strictly adhering to the TRENCH FORGE PROTOCOL comic meme style: ${fullPrompt}` });
+           parts.push({ text: `REF_IDENTITY_ATTACHED. ADHERE TO STYLE: ${fullPrompt}` });
         } else {
-           parts.push({ text: `INITIATE FORGE PROTOCOL: ${fullPrompt}` });
+           parts.push({ text: `INITIATE FORGE: ${fullPrompt}` });
         }
 
         return await ai.models.generateContent({ model, contents: { parts }, config }) as GenerateContentResponse;
@@ -189,8 +184,8 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
       }
 
       if (foundImageUrl) { setGeneratedImg(foundImageUrl); sounds.playNeutralBlip(); }
-      else { throw new Error("Forge response blocked by safety or empty."); }
-    } catch (err: any) { setApiError(err.message || "Forge Timeout. System overloaded."); }
+      else { throw new Error("Forge response blocked by safety."); }
+    } catch (err: any) { setApiError(err.message || "Forge Timeout. High-Fidelity models require more bandwidth."); }
     finally { setIsGenerating(false); }
   };
 
@@ -203,14 +198,10 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
       const imgInfo = await getProcessedImageData(generatedImg);
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        
         const model = 'gemini-3-pro-image-preview';
         
         const config: any = {
-          imageConfig: { 
-            aspectRatio: aspectRatio as any,
-            imageSize: imageSize as any
-          },
+          imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any },
           tools: [{ googleSearch: {} }]
         };
 
@@ -218,8 +209,8 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
           model,
           contents: {
             parts: [
-              { inlineData: { data: imgInfo?.data || '', mimeType: imgInfo?.mimeType || 'image/png' } },
-              { text: `Maintain the Trench Forge meme style. Apply change: ${forgeEditPrompt}. ${TRENCH_FORGE_PROTOCOL}` }
+              { inlineData: { data: imgInfo?.data || '', mimeType: imgInfo?.mimeType || 'image/jpeg' } },
+              { text: `MORPH REQUEST: ${forgeEditPrompt}. ${TRENCH_FORGE_PROTOCOL}` }
             ]
           },
           config
@@ -241,7 +232,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
   };
 
   const handleAddToGallery = () => { if (generatedImg && onImageGenerated) { onImageGenerated(generatedImg); sounds.playCommandClick(); } };
-  const handleDownloadForge = () => { if (!generatedImg) return; sounds.playCommandClick(); const link = document.createElement('a'); link.download = `ruggeddev-forge-${Date.now()}.png`; link.href = generatedImg; link.click(); };
+  const handleDownloadForge = () => { if (!generatedImg) return; sounds.playCommandClick(); const link = document.createElement('a'); link.download = `ruggeddev-pro-${Date.now()}.png`; link.href = generatedImg; link.click(); };
 
   return (
     <section id="chat-terminal" className="py-12 sm:py-24 bg-[#111111] border-y-2 border-[#6E6E6E]/20 relative">
@@ -252,7 +243,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
         <div className="text-center mb-10 sm:mb-16">
           <RevealText>
             <h2 className="text-3xl sm:text-6xl font-black mb-3 tracking-tighter uppercase italic">Propaganda Terminal</h2>
-            <p className="text-[#3A5F3D] font-black text-[10px] sm:text-sm tracking-[0.2em] sm:tracking-[0.4em] uppercase">Intelligence & Trench Forge Pro Hub</p>
+            <p className="text-[#3A5F3D] font-black text-[10px] sm:text-sm tracking-[0.2em] sm:tracking-[0.4em] uppercase">Nano Pro 3.0 // High Fidelity Protocol</p>
           </RevealText>
         </div>
 
@@ -311,14 +302,14 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
               <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
                 <h3 className="text-lg sm:text-xl font-black text-rugged-red uppercase italic tracking-widest">Trench Forge Pro</h3>
                 <div className="flex items-center gap-2">
-                  <span className="bg-rugged-red text-white text-[8px] font-black px-2 py-0.5 rounded uppercase">Nano Pro 3.0</span>
+                  <span className="bg-rugged-red text-white text-[8px] font-black px-2 py-0.5 rounded uppercase">Exclusive Pro 3.0</span>
                 </div>
               </div>
               
               <textarea 
                 value={genPrompt} 
                 onChange={(e) => setGenPrompt(e.target.value)} 
-                placeholder="Describe a scene (e.g. 'Single survivor sitting alone at table'). Forge Pro will render in flat Wojak comic style." 
+                placeholder="Describe a scene (e.g. 'Single survivor sitting alone at table'). Exclusive Pro renders at high fidelity." 
                 className="w-full bg-[#111] border border-white/10 p-4 text-white min-h-[100px] rounded-xl mb-6 focus:border-rugged-red outline-none text-sm font-mono" 
               />
               
@@ -334,7 +325,7 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-white/40 uppercase tracking-widest ml-1">Resolution Config</label>
+                  <label className="text-[9px] font-black text-white/40 uppercase tracking-widest ml-1">Resolution Detail</label>
                   <div className="flex bg-[#111] border border-white/10 rounded-xl overflow-hidden">
                     {(['1K', '2K', '4K'] as const).map(size => (
                       <button
@@ -351,20 +342,20 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
 
               <div className="flex flex-col gap-4">
                 <button onClick={generateImage} disabled={isGenerating || !genPrompt.trim()} className="w-full bg-rugged-red py-4 sm:py-6 font-black text-white text-lg sm:text-xl rounded-xl active:scale-95 uppercase tracking-widest shadow-[0_10px_30px_rgba(193,39,45,0.3)]">
-                  {isGenerating ? 'FORGING...' : 'INITIATE TRENCH FORGE'}
+                  {isGenerating ? 'PROCESSING HIGH-FIDELITY...' : 'INITIATE PRO FORGE'}
                 </button>
 
                 {generatedImg && (
                   <div className="p-4 bg-white/5 border border-rugged-green/20 rounded-xl space-y-3 animate-reveal">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-rugged-green rounded-full"></div>
-                      <span className="text-[10px] font-black text-rugged-green uppercase tracking-widest">Atmospheric Morph</span>
+                      <span className="text-[10px] font-black text-rugged-green uppercase tracking-widest">Identity Refinement</span>
                     </div>
                     <div className="flex gap-2">
                       <input 
                         value={forgeEditPrompt} 
                         onChange={(e) => setForgeEditPrompt(e.target.value)} 
-                        placeholder="Refine the scene..." 
+                        placeholder="Refine high-res scene..." 
                         className="flex-1 bg-black border border-white/10 p-3 text-white rounded-lg focus:border-rugged-green outline-none text-[11px] font-mono"
                       />
                       <button 
@@ -383,7 +374,8 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                 {(isGenerating || isMorphing) ? (
                   <div className="flex flex-col items-center px-6">
                     <div className="w-10 h-10 border-4 border-rugged-red border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <span className="font-black uppercase text-[10px] tracking-widest animate-pulse text-rugged-red text-center">Sketching Meme Assets...</span>
+                    <span className="font-black uppercase text-[10px] tracking-widest animate-pulse text-rugged-red text-center">Calibrating Visual Planes...</span>
+                    <span className="text-[8px] font-mono text-white/30 uppercase mt-2">Uploading Reference Payload</span>
                   </div>
                 ) : generatedImg ? (
                   <div className="relative w-full h-full group">
@@ -396,8 +388,8 @@ export const AILab: React.FC<AILabProps> = ({ baseImage, onForgeToMeme, onImageG
                   </div>
                 ) : (
                   <div className="text-center p-8 opacity-40">
-                    <p className="uppercase text-[#3A5F3D] text-[12px] font-black tracking-widest leading-loose">Trench Forge Protocol</p>
-                    <p className="text-[8px] font-bold uppercase tracking-widest mt-2 text-[#6E6E6E]">Modern Wojak Meme Style // Clean Linework // Flat Colors</p>
+                    <p className="uppercase text-[#3A5F3D] text-[12px] font-black tracking-widest leading-loose">Visual Forge Exclusive Pro</p>
+                    <p className="text-[8px] font-bold uppercase tracking-widest mt-2 text-[#6E6E6E]">High Fidelity // Google Search Grounding Integrated</p>
                   </div>
                 )}
               </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { FALLBACK_IMAGE, OFFICIAL_STORY_IMAGE } from '../constants';
@@ -31,24 +32,36 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
 
   const TRENCH_FORGE_PROTOCOL = `
     TRENCH FORGE PROTOCOL - ART STYLE (STRICT):
-    - STYLE: Modern Wojak meme comic style. Simple, flat, stylized digital meme panel. Bold, clean outlines, flat color fills enhanced by very subtle soft gradients.
-    - CHARACTER: One Wojak-style male survivor. Military helmet with "SURVIVOR" clearly written.
-    - FACE: Pale clean white skin, simple black outlines, tired eyes, neutral expression.
-    - COLOR: Neutral palette, clean whites. NO war grading. NO sepia.
-    - BRANDING: Subtle small "$RDEV" text hidden.
-    - NEGATIVE: photorealistic, semi-realistic, graphic novel, cinematic, 3D render, anime.
+    - STYLE: Modern Wojak meme comic style. Bold outlines, flat colors.
+    - CHARACTER: Wojak survivor unit.
+    - FACE: Tired expression, neutral tone.
+    - COLOR: Muted palette.
   `;
 
-  const getBase64FromUrl = async (url: string): Promise<string> => {
-    if (url.startsWith('data:')) return url.split(',')[1];
-    if (url === OFFICIAL_STORY_IMAGE) return '';
-    const response = await fetch(url);
-    const blob = await response.blob();
+  // Speed Optimization: Resize to 512px before sending to API
+  const getOptimizedBase64 = async (url: string): Promise<{ data: string, mimeType: string }> => {
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => { resolve((reader.result as string).split(',')[1]); };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const MAX_DIM = 512;
+        let width = img.width;
+        let height = img.height;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) { height = (height * MAX_DIM) / width; width = MAX_DIM; }
+          else { width = (width * MAX_DIM) / height; height = MAX_DIM; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        const [header, data] = dataUrl.split(',');
+        const mimeType = header.split(':')[1].split(';')[0];
+        resolve({ data, mimeType });
+      };
+      img.onerror = reject;
+      img.src = url;
     });
   };
 
@@ -61,12 +74,8 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
       } catch (err: any) {
         lastError = err;
         const msg = (err?.message || String(err)).toLowerCase();
-        if (msg.includes("requested entity was not found")) {
-          setApiError("Intel Key Invalid. Re-select your paid API key.");
-          throw err;
-        }
         if ((err?.status === 503 || err?.status === 429 || msg.includes("overloaded")) && i < maxRetries - 1) {
-          await new Promise(r => setTimeout(r, Math.pow(2, i) * 1500));
+          await new Promise(r => setTimeout(r, Math.pow(2, i) * 1200));
           continue;
         }
         throw err;
@@ -98,26 +107,16 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
     try {
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        
-        // Strict Pro Tier
-        const model = 'gemini-3-pro-image-preview';
-        
-        const fullPrompt = `
-          ${TRENCH_FORGE_PROTOCOL}
-          PFP VARIATION REQUEST: ${forgePrompt}
-        `.trim();
+        const model = 'gemini-3-pro-image-preview'; 
         
         const config: any = {
-          imageConfig: { 
-            aspectRatio: aspectRatio as any,
-            imageSize: imageSize as any
-          },
+          imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any },
           tools: [{ googleSearch: {} }]
         };
 
         return await ai.models.generateContent({
           model,
-          contents: { parts: [{ text: fullPrompt }] },
+          contents: { parts: [{ text: `${TRENCH_FORGE_PROTOCOL}\nREQUEST: ${forgePrompt}` }] },
           config
         }) as GenerateContentResponse;
       });
@@ -133,8 +132,7 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
       }
 
       if (foundImageUrl) { setPfpImage(foundImageUrl); setHasImage(true); sounds.playNeutralBlip(); }
-      else { throw new Error("Forge response blocked by filters."); }
-    } catch (err: any) { setApiError(err.message || "Forge Error. Transmission failed."); }
+    } catch (err: any) { setApiError(err.message || "Forge Error."); }
     finally { setIsGenerating(false); }
   };
 
@@ -144,21 +142,14 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
     setApiError(null);
     sounds.playClick();
     try {
-      const base64Data = await getBase64FromUrl(pfpImage);
-      const mimeType = pfpImage.startsWith('data:') ? pfpImage.split(';')[0].split(':')[1] : 'image/png';
+      const optimized = await getOptimizedBase64(pfpImage);
       
       const response = await withRetry(async () => {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        
         const model = 'gemini-3-pro-image-preview';
         
-        const instruction = `Apply change to the PFP: ${editPrompt}. Maintain Trench Forge comic meme style: ${TRENCH_FORGE_PROTOCOL}`;
-        
         const config: any = {
-          imageConfig: { 
-            aspectRatio: aspectRatio as any,
-            imageSize: imageSize as any
-          },
+          imageConfig: { aspectRatio: aspectRatio as any, imageSize: imageSize as any },
           tools: [{ googleSearch: {} }]
         };
 
@@ -166,8 +157,8 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
           model,
           contents: {
               parts: [
-                { inlineData: { data: base64Data, mimeType: mimeType } },
-                { text: instruction }
+                { inlineData: { data: optimized.data, mimeType: optimized.mimeType } },
+                { text: `CHANGE: ${editPrompt}. ${TRENCH_FORGE_PROTOCOL}` }
               ]
           },
           config
@@ -186,13 +177,6 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
       if (foundImageUrl) { setPfpImage(foundImageUrl); sounds.playNeutralBlip(); }
     } catch (err: any) { setApiError(err.message || "Modification Failed."); }
     finally { setIsEditing(false); setEditPrompt(''); }
-  };
-
-  const handleAddToGallery = () => {
-    if (canvasRef.current && onImageGenerated) {
-      onImageGenerated(canvasRef.current.toDataURL('image/png'));
-      sounds.playCommandClick();
-    }
   };
 
   const drawPFP = () => {
@@ -218,14 +202,7 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
         ctx.fillStyle = 'white'; ctx.font = '900 60px Inter'; ctx.textAlign = 'center'; ctx.fillText('✓', 850, 870);
       } else if (overlay === 'survival') {
         ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(0, 850, 1000, 150);
-        ctx.fillStyle = 'white'; ctx.font = '900 35px Inter'; ctx.textAlign = 'center'; ctx.fillText('SURVIVOR UNIT VERIFIED', 500, 950);
-      } else if (overlay === 'glitch') {
-        ctx.fillStyle = 'rgba(193, 39, 45, 0.15)';
-        for(let i=0; i<15; i++) {
-          ctx.fillRect(0, Math.random()*1000, 1000, Math.random()*10 + 2);
-        }
-        ctx.fillStyle = 'rgba(58, 95, 61, 0.1)';
-        ctx.fillRect(Math.random()*1000, 0, Math.random()*50, 1000);
+        ctx.fillStyle = 'white'; ctx.font = '900 35px Inter'; ctx.textAlign = 'center'; ctx.fillText('SURVIVOR UNIT', 500, 950);
       }
       setIsDrawing(false);
     };
@@ -253,10 +230,10 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
             <div className="flex justify-between items-center px-1">
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 bg-rugged-green rounded-full animate-pulse"></div>
-                <label className="text-[7px] md:text-[10px] font-black text-rugged-green uppercase tracking-widest">Web Search Active</label>
+                <label className="text-[7px] md:text-[10px] font-black text-rugged-green uppercase tracking-widest">Web Grounding Active</label>
               </div>
               <div className="flex items-center gap-1.5">
-                <label className="text-[7px] md:text-[10px] font-black text-rugged-gray uppercase">Nano Pro Tier</label>
+                <label className="text-[7px] md:text-[10px] font-black text-rugged-gray uppercase">Nano Pro Mode</label>
               </div>
             </div>
 
@@ -274,7 +251,7 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
                   <option value="1K">1K</option><option value="2K">2K</option><option value="4K">4K</option>
                 </select>
               </div>
-              <textarea value={forgePrompt} onChange={(e) => setForgePrompt(e.target.value)} placeholder="Traits (e.g. 'Tired survivor')..." className="w-full bg-black border border-rugged-gray/20 p-1 text-white font-mono text-[9px] min-h-[40px] md:min-h-[60px] rounded outline-none focus:border-rugged-green" />
+              <textarea value={forgePrompt} onChange={(e) => setForgePrompt(e.target.value)} placeholder="Traits..." className="w-full bg-black border border-rugged-gray/20 p-1 text-white font-mono text-[9px] min-h-[40px] md:min-h-[60px] rounded outline-none focus:border-rugged-green" />
               <button onClick={generatePFP} disabled={isGenerating || !forgePrompt.trim()} className="w-full py-2 bg-rugged-green text-white font-black text-[8px] uppercase rounded hover:brightness-110 active:scale-95 transition-all">
                 {isGenerating ? 'FORGING...' : 'SUMMON'}
               </button>
@@ -282,26 +259,13 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
 
             <div className="bg-[#111] p-2 md:p-4 border border-rugged-gray/10 rounded-lg space-y-2">
               <label className="text-[7px] md:text-[10px] font-black text-rugged-gray uppercase">Morph</label>
-              <input value={editPrompt} onChange={(e) => setEditPrompt(e.target.value)} placeholder="Refine identity..." className="w-full bg-black border border-rugged-gray/20 p-1 text-white font-mono text-[9px] rounded outline-none" />
+              <input value={editPrompt} onChange={(e) => setEditPrompt(e.target.value)} placeholder="Edit current..." className="w-full bg-black border border-rugged-gray/20 p-1 text-white font-mono text-[9px] rounded outline-none" />
               <button onClick={editPFP} disabled={isEditing || !editPrompt.trim()} className="w-full py-1.5 bg-white text-black font-black text-[8px] uppercase rounded hover:bg-rugged-gray transition-all">
                 {isEditing ? '...' : 'MORPH'}
               </button>
             </div>
 
             <div className="grid grid-cols-1 gap-2">
-              <div className="space-y-1">
-                <label className="text-[7px] font-black text-rugged-gray uppercase">Identity Badge</label>
-                <select 
-                  value={overlay} 
-                  onChange={(e) => { setOverlay(e.target.value as any); sounds.playRelayClick(); }} 
-                  className="w-full bg-black border border-white/10 text-[8px] md:text-[10px] text-white p-1.5 font-bold rounded outline-none"
-                >
-                  <option value="none">UNVERIFIED_SUBJECT</option>
-                  <option value="verified">VERIFIED_SURVIVOR</option>
-                  <option value="survival">TRENCH_UNIT_VERIFIED</option>
-                  <option value="glitch">GLITCH_SCAN_ACTIVE</option>
-                </select>
-              </div>
               <div className="space-y-1">
                 <label className="text-[7px] font-black text-rugged-gray uppercase">Zoom</label>
                 <input type="range" min="1" max="3" step="0.01" value={zoom} onChange={(e) => setZoom(parseFloat(e.target.value))} className="w-full accent-rugged-green" />
@@ -313,19 +277,19 @@ export const PFPGenerator: React.FC<PFPGeneratorProps> = ({ onImageGenerated }) 
             </div>
 
             <div className="flex flex-col gap-1 mt-auto">
-              <div className="flex gap-1">
-                <button onClick={() => { setPfpImage(FALLBACK_IMAGE); setHasImage(true); }} className="flex-1 py-1.5 border border-[#3A5F3D]/30 text-[7px] font-black uppercase text-white rounded">Reset</button>
-                <button onClick={() => fileInputRef.current?.click()} className="flex-1 py-1.5 border border-[#6E6E6E]/30 text-[7px] font-black uppercase text-[#6E6E6E] rounded">Upload</button>
-              </div>
+              <button onClick={() => fileInputRef.current?.click()} className="w-full py-1.5 border border-[#6E6E6E]/30 text-[7px] font-black uppercase text-[#6E6E6E] rounded">Upload Base</button>
               <button onClick={() => canvasRef.current && window.open(canvasRef.current.toDataURL('image/png'))} className="w-full py-2 bg-black border border-white/10 text-white font-black uppercase text-[8px] rounded">Preview Large</button>
-              <button onClick={handleAddToGallery} className="w-full py-2 bg-white text-black font-black uppercase text-[8px] rounded">Add Archive</button>
+              <button onClick={() => canvasRef.current && onImageGenerated && onImageGenerated(canvasRef.current.toDataURL('image/png'))} className="w-full py-2 bg-white text-black font-black uppercase text-[8px] rounded">Add Archive</button>
               <input type="file" ref={fileInputRef} onChange={handleUpload} className="hidden" accept="image/*" />
             </div>
           </div>
 
           <div className="w-[55%] flex-1 flex flex-col items-center h-full sm:h-auto">
             <div className="relative w-full aspect-square shadow-[0_20px_40px_rgba(0,0,0,0.8)] overflow-hidden bg-neutral-900 border-2 border-white/5 rounded-xl flex items-center justify-center sticky top-0">
-              {(isDrawing || isRetrying || isEditing) && <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm"><div className="text-rugged-green font-black text-[8px] uppercase tracking-widest animate-pulse">{isEditing ? 'MORPHING...' : 'FORGING...'}</div></div>}
+              {(isDrawing || isRetrying || isEditing || isGenerating) && <div className="absolute inset-0 bg-black/60 z-50 flex flex-col items-center justify-center backdrop-blur-sm">
+                <div className="text-rugged-green font-black text-[8px] uppercase tracking-widest animate-pulse">Syncing Payload...</div>
+                <div className="text-white/20 text-[6px] uppercase mt-2">Uploading Reference (Optimized)</div>
+              </div>}
               <canvas ref={canvasRef} className="w-full h-full object-contain" />
             </div>
           </div>
